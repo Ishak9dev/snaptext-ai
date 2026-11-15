@@ -190,7 +190,7 @@ const translations = {
     ctaTitle: "Prêt à transformer vos images en texte ?",
     ctaDesc:
       "Créez votre compte gratuit et commencez à extraire du texte dès aujourd'hui.",
-    footerDesc:
+    footerDesc:  
       "La solution simple pour transformer vos images en texte modifiable.",
     product: "Produit",
     account: "Compte",
@@ -221,6 +221,35 @@ const howIcons = [ShieldCheck, UploadCloud, FileText];
 export default function Home() {
   const [lang, setLang] = useState<Language>("en");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+async function handleProCheckout() {
+  try {
+    setCheckoutLoading(true);
+
+    const response = await fetch("/api/stripe/checkout", {
+      method: "POST",
+    });
+
+    if (response.status === 401) {
+      window.location.href = "/login";
+      return;
+    }
+
+    const data = await response.json();
+
+    if (!response.ok || !data.url) {
+      throw new Error(data.error || "Unable to start checkout.");
+    }
+
+    window.location.href = data.url;
+  } catch (error) {
+    console.error("Checkout error:", error);
+    alert("Unable to start checkout. Please try again.");
+  } finally {
+    setCheckoutLoading(false);
+  }
+}
 
   const t = translations[lang];
 
@@ -239,39 +268,44 @@ export default function Home() {
     [t.step3, t.step3Desc],
   ];
 
-  const plans = [
-    {
-      name: t.monthly,
-      price: t.freePrice,
-      features: [t.freeFeature1, t.freeFeature2, t.freeFeature3],
-      available: true,
-      popular: false,
-    },
-    {
-      name: t.starter,
-      price: t.starterPrice,
-      features: [
-        t.starterFeature1,
-        t.starterFeature2,
-        t.starterFeature3,
-        t.starterFeature4,
-      ],
-      available: false,
-      popular: false,
-    },
-    {
-      name: t.pro,
-      price: t.proPrice,
-      features: [
-        t.proFeature1,
-        t.proFeature2,
-        t.proFeature3,
-        t.proFeature4,
-      ],
-      available: false,
-      popular: false,
-    },
-  ];
+
+const plans = [
+  {
+    name: t.monthly,
+    price: t.freePrice,
+    features: [t.freeFeature1, t.freeFeature2, t.freeFeature3],
+    available: true,
+    popular: false,
+    planType: "free",
+  },
+  {
+    name: t.starter,
+    price: t.starterPrice,
+    features: [
+      t.starterFeature1,
+      t.starterFeature2,
+      t.starterFeature3,
+      t.starterFeature4,
+    ],
+    available: false,
+    popular: false,
+    planType: "starter",
+  },
+  {
+    name: t.pro,
+    price: "€4.99",
+    features: [
+      t.proFeature1,
+      t.proFeature2,
+      t.proFeature3,
+      t.proFeature4,
+    ],
+    available: true,
+    popular: true,
+    planType: "pro",
+  },
+];
+ 
 
   function closeMobileMenu() {
     setMobileOpen(false);
@@ -634,18 +668,28 @@ export default function Home() {
                   )}
                 </div>
 
-                {plan.available ? (
-                  <Link
-                    href="/signup"
-                    className="mt-7 block w-full rounded-xl bg-violet-600 py-3 text-center text-sm font-bold text-white transition hover:bg-violet-700"
-                  >
-                    {t.choose}
-                  </Link>
-                ) : (
-                  <div className="mt-7 rounded-xl border border-slate-200 bg-slate-50 py-3 text-center text-sm font-semibold text-slate-400">
-                    {t.popular}
-                  </div>
-                )}
+{plan.planType === "pro" ? (
+  <button
+    type="button"
+    onClick={handleProCheckout}
+    disabled={checkoutLoading}
+    className="mt-7 block w-full rounded-xl bg-violet-600 py-3 text-center text-sm font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+  >
+    {checkoutLoading ? "Redirecting..." : "Upgrade to Pro"}
+  </button>
+) : plan.available ? (
+  <Link
+    href="/signup"
+    className="mt-7 block w-full rounded-xl bg-violet-600 py-3 text-center text-sm font-bold text-white transition hover:bg-violet-700"
+  >
+    {t.choose}
+  </Link>
+) : (
+  <div className="mt-7 rounded-xl border border-slate-200 bg-slate-50 py-3 text-center text-sm font-semibold text-slate-400">
+    {t.popular}
+  </div>
+)}
+
 
                 <div className="my-7 border-t border-slate-200" />
 

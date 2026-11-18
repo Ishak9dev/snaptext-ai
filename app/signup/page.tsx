@@ -24,6 +24,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   async function handleSignup(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -33,6 +34,10 @@ export default function SignupPage() {
 
     if (password.length < 8) {
       setError("Your password must contain at least 8 characters.");
+      return;
+    }
+    if (!acceptedTerms) {
+      setError("Please review and accept the Terms of Service and Privacy Policy.");
       return;
     }
 
@@ -173,9 +178,10 @@ export default function SignupPage() {
           </Link>
         </p>
 
-        <p className="mt-8 text-center text-xs text-slate-400">
-          By creating an account, you agree to our Terms and Privacy Policy.
-        </p>
+        <label className="mt-6 flex items-start gap-2 text-xs leading-5 text-slate-500">
+          <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-1" />
+          <span>By creating an account, you agree to the <Link className="text-violet-700 underline" href="/legal/terms">Terms of Service</Link> and acknowledge the <Link className="text-violet-700 underline" href="/legal/privacy">Privacy Policy</Link>.</span>
+        </label>
       </div>
     </main>
   );

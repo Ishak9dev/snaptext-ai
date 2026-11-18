@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { openCookieSettings } from "@/components/cookie-consent";
 import {
   BrainCircuit,
   ReceiptText,
@@ -1335,9 +1336,15 @@ useEffect(() => {
                 {t.legal}
               </h2>
 
-              <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
-                <span>{t.privacy}</span>
-                <span>{t.terms}</span>
+              <div className="mt-4 flex flex-col gap-3 text-sm text-slate-500">
+                <Link href={`${lang === "fr" ? "/fr" : ""}/legal/privacy`} className="hover:text-violet-600">{t.privacy}</Link>
+                <Link href={`${lang === "fr" ? "/fr" : ""}/legal/terms`} className="hover:text-violet-600">{t.terms}</Link>
+                <Link href={`${lang === "fr" ? "/fr" : ""}/legal/sale-terms`} className="hover:text-violet-600">{lang === "fr" ? "Conditions de vente" : "Terms of Sale"}</Link>
+                <Link href={`${lang === "fr" ? "/fr" : ""}/legal/cookies`} className="hover:text-violet-600">{lang === "fr" ? "Politique cookies" : "Cookie Policy"}</Link>
+                <Link href={`${lang === "fr" ? "/fr" : ""}/legal/legal-notice`} className="hover:text-violet-600">{lang === "fr" ? "Mentions légales" : "Legal Notice"}</Link>
+                <Link href={`${lang === "fr" ? "/fr" : ""}/legal/refunds`} className="hover:text-violet-600">{lang === "fr" ? "Rétractation et remboursements" : "Withdrawal and refunds"}</Link>
+                <Link href={`${lang === "fr" ? "/fr" : ""}/legal/contact`} className="hover:text-violet-600">{lang === "fr" ? "Contact et demandes RGPD" : "Contact and privacy requests"}</Link>
+                <button type="button" onClick={openCookieSettings} className="text-left hover:text-violet-600">{lang === "fr" ? "Paramètres des cookies" : "Cookie Settings"}</button>
               </div>
             </div>
           </div>

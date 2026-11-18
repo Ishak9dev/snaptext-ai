@@ -6,6 +6,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+function getSafeNextPath() {
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get("next");
+
+  if (next && next.startsWith("/") && !next.startsWith("//")) {
+    return next;
+  }
+
+  // Normal login from the landing page returns to the landing page.
+  return "/";
+}
+
 export default function LoginPage() {
   const router = useRouter();
 
@@ -16,6 +28,7 @@ export default function LoginPage() {
 
   async function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
     setError("");
     setLoading(true);
 
@@ -32,7 +45,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.replace("/dashboard");
+      router.replace(getSafeNextPath());
       router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");
@@ -119,9 +132,9 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-6 text-center text-sm text-slate-500">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link
-            href="/signup"
+            href={`/signup${typeof window !== "undefined" && window.location.search ? window.location.search : ""}`}
             className="font-semibold text-violet-700 hover:text-violet-800"
           >
             Create one
@@ -140,4 +153,3 @@ export default function LoginPage() {
     </main>
   );
 }
-

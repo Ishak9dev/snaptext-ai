@@ -1,15 +1,28 @@
+
 "use client";
 
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useWorkspaceLanguage } from "@/lib/workspace-i18n";
+
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { createWorker } from "tesseract.js";
 import { createClient } from "@/lib/supabase/client";
+import { saveToolHistoryClient } from "@/lib/save-tool-history-client";
+import { consumeLocalToolUsage, completeLocalToolUsage, releaseLocalToolUsage } from "@/lib/usage-client";
+
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 type OcrLanguage = "eng" | "fra" | "both";
 type UiLanguage = "en" | "fr";
-
+type OcrMode = "standard" | "ai";
 const translations = {
   en: {
+    modeLabel: "Choose OCR mode",
+    standard: "Standard OCR",
+aiEnhanced: "AI Enhanced OCR",
+proOnly: "Two free lifetime uses per tool; unlimited with Pro",
+aiProcessing: "AI is analyzing your image...",
+standardPrivacy: "Images are processed locally in your browser.",
+aiPrivacy: "AI Enhanced OCR processes your image securely through Cloudflare AI.",
     badge: "IMAGE TO TEXT",
     title: "Convert your image into text",
     subtitle: "Upload an image and extract its text automatically.",
@@ -44,12 +57,21 @@ const translations = {
     privacy: "Images are processed locally in your browser.",
     languageLabel: "Interface language",
     save: "Save to history",
-saving: "Saving...",
-saved: "Extraction saved successfully!",
-saveError: "Unable to save extraction. Please try again.",
-loginRequired: "Please log in to save your extraction.",
+    saving: "Saving...",
+    saved: "Extraction saved successfully!",
+    saveError: "Unable to save extraction. Please try again.",
+    loginRequired: "Please log in to save your extraction.",
+    monthlyLimit:
+      "You have used the two free lifetime uses for this tool. Upgrade to Pro for unlimited access.",
   },
   fr: {
+
+    standard: "OCR standard",
+aiEnhanced: "OCR amélioré par IA",
+proOnly: "Disponible avec Pro",
+aiProcessing: "L'IA analyse votre image...",
+standardPrivacy: "Les images sont traitées localement dans votre navigateur.",
+aiPrivacy: "L'OCR amélioré par IA traite votre image via Cloudflare AI.",
     badge: "IMAGE EN TEXTE",
     title: "Convertissez votre image en texte",
     subtitle: "Importez une image et extrayez automatiquement son texte.",
@@ -85,39 +107,57 @@ loginRequired: "Please log in to save your extraction.",
     privacy: "Les images sont traitées localement dans votre navigateur.",
     languageLabel: "Langue de l'interface",
     save: "Enregistrer dans l'historique",
-saving: "Enregistrement...",
-saved: "Extraction enregistrée avec succès !",
-saveError: "Impossible d'enregistrer l'extraction. Réessayez.",
-loginRequired: "Veuillez vous connecter pour enregistrer votre extraction.",
+    saving: "Enregistrement...",
+    saved: "Extraction enregistrée avec succès !",
+    saveError: "Impossible d'enregistrer l'extraction. Réessayez.",
+    loginRequired: "Veuillez vous connecter pour enregistrer votre extraction.",
+    monthlyLimit:
+      "Limite mensuelle atteinte : 2/2 utilisations sur tous les outils. Passez à Pro pour un accès illimité.",
   },
 };
 
 export default function OcrWorkspace() {
+  const routeLanguage = useWorkspaceLanguage();
+  const [mode, setMode] = useState<OcrMode>("standard");
+
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
+  const previewUrlRef = useRef("");
   const [error, setError] = useState("");
   const [language, setLanguage] = useState<OcrLanguage>("both");
-  const [uiLanguage, setUiLanguage] = useState<UiLanguage>("en");
+  const [uiLanguage, setUiLanguage] = useState<UiLanguage>(routeLanguage);
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
   const t = translations[uiLanguage];
-const [saving, setSaving] = useState(false);
-const [saveMessage, setSaveMessage] = useState("");
-  useEffect(() => {
-    if (!file) {
-      setPreviewUrl("");
-      return;
-    }
 
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
+  function updateFile(nextFile: File | null) {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = nextFile ? URL.createObjectURL(nextFile) : "";
+    setPreviewUrl(previewUrlRef.current);
+    setFile(nextFile);
+  }
 
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+  useEffect(() => () => {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+  }, []);
 
+
+function changeMode(newMode: OcrMode) {
+  if (loading || saving) return;
+
+
+  setMode(newMode);
+  setResult("");
+  setError("");
+  setStatus("");
+  setProgress(0);
+  setSaveMessage("");
+}
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const selectedFile = event.target.files?.[0];
 
@@ -125,6 +165,7 @@ const [saveMessage, setSaveMessage] = useState("");
     setResult("");
     setStatus("");
     setProgress(0);
+    setSaveMessage("");
 
     if (!selectedFile) return;
 
@@ -137,24 +178,32 @@ const [saveMessage, setSaveMessage] = useState("");
     if (!allowedTypes.includes(selectedFile.type)) {
       setError(t.invalidType);
       event.target.value = "";
+      updateFile(null);
       return;
     }
 
-    if (selectedFile.size > MAX_FILE_SIZE) {
+    if (
+      selectedFile.size === 0 ||
+      selectedFile.size > MAX_FILE_SIZE
+    ) {
       setError(t.tooLarge);
       event.target.value = "";
+      updateFile(null);
       return;
     }
 
-    setFile(selectedFile);
+    updateFile(selectedFile);
   }
 
   function removeImage() {
-    setFile(null);
+    if (loading || saving) return;
+
+    updateFile(null);
     setResult("");
     setError("");
     setStatus("");
     setProgress(0);
+    setSaveMessage("");
 
     const input = document.getElementById(
       "ocr-image"
@@ -173,15 +222,19 @@ const [saveMessage, setSaveMessage] = useState("");
     if (normalized.includes("loading tesseract core")) {
       return "Chargement du moteur OCR...";
     }
+
     if (normalized.includes("initializing tesseract")) {
       return "Initialisation de Tesseract...";
     }
+
     if (normalized.includes("loading language")) {
       return "Chargement des langues...";
     }
+
     if (normalized.includes("initializing api")) {
       return "Préparation de la reconnaissance...";
     }
+
     if (normalized.includes("recognizing text")) {
       return t.recognizing;
     }
@@ -189,126 +242,261 @@ const [saveMessage, setSaveMessage] = useState("");
     return t.processing;
   }
 
-  async function extractText() {
-    if (!file) return;
+ async function extractText() {
+  if (!file || loading || saving) return;
 
-    setLoading(true);
-    setError("");
-    setResult("");
-    setProgress(0);
-    setStatus(t.initializing);
+  setLoading(true);
+  setError("");
+  setResult("");
+  setSaveMessage("");
+  setProgress(0);
+  setStatus(mode === "ai" ? t.aiProcessing : t.initializing);
 
-    let worker: Awaited<ReturnType<typeof createWorker>> | null = null;
+  let worker: Awaited<ReturnType<typeof createWorker>> | null = null;
+  let pendingReservationId: string | null = null;
 
-    try {
-      const languages =
-        language === "both"
-          ? ["eng", "fra"]
-          : [language];
+  try {
+    // AI Enhanced OCR
+    if (mode === "ai") {
+      const formData = new FormData();
+      formData.append("image", file);
 
-      worker = await createWorker(languages, 1, {
-        logger: (message) => {
-          setStatus(translateOcrStatus(message.status));
-          setProgress(
-            Math.round((message.progress ?? 0) * 100)
-          );
-        },
+      const response = await fetch("/api/ocr", {
+        method: "POST",
+        body: formData,
       });
 
-      setStatus(t.recognizing);
+      const payload = await response.json();
 
-      const { data } = await worker.recognize(file);
-      const extractedText = data.text.trim();
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error || t.extractionError);
+      }
+
+      const extractedText = payload.text?.trim();
 
       if (!extractedText) {
         setError(t.noText);
-      } else {
-        setResult(extractedText);
-        setStatus(t.completed);
-        setProgress(100);
-      }
-    } catch (err) {
-      console.error("OCR error:", err);
-
-      setError(t.extractionError);
-      setStatus("");
-    } finally {
-      if (worker) {
-        await worker.terminate();
+        setStatus("");
+        return;
       }
 
-      setLoading(false);
-    }
-  }
-async function saveExtraction() {
-  if (!file || !result.trim()) return;
-
-  setSaving(true);
-  setError("");
-  setSaveMessage("");
-
-  try {
-    const supabase = createClient();
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError) throw userError;
-
-    if (!user) {
-      setError(t.loginRequired);
+      setResult(extractedText);
+      setStatus(t.completed);
+      setProgress(100);
+      try {
+        await saveToolHistoryClient({
+          toolType: "image-to-text",
+          fileName: file.name,
+          result: extractedText,
+          metadata: { language, mode: "ai" },
+        });
+        setSaveMessage(t.saved);
+      } catch (historyError) {
+        console.error("AI OCR history save failed:", historyError);
+        setError("Text extracted, but it could not be saved to history. Please try again later.");
+      }
       return;
     }
 
-    const { error: insertError } = await supabase
-      .from("extractions")
-      .insert({
-        user_id: user.id,
-        file_name: file.name,
-        extracted_text: result,
-        language: language,
+    // Standard OCR with Tesseract.js: authorize this tool use server-side.
+    const usageReservation = await consumeLocalToolUsage("ocr");
+    pendingReservationId = usageReservation;
+    const languages =
+      language === "both" ? ["eng", "fra"] : [language];
+
+    worker = await createWorker(languages, 1, {
+      logger: (message) => {
+        setStatus(translateOcrStatus(message.status));
+
+        setProgress(
+          Math.min(
+            100,
+            Math.max(
+              0,
+              Math.round((message.progress ?? 0) * 100)
+            )
+          )
+        );
+      },
+    });
+
+    setStatus(t.recognizing);
+
+    const { data } = await worker.recognize(file);
+    const extractedText = data.text.trim();
+
+    if (!extractedText) {
+      setError(t.noText);
+      setStatus("");
+      setProgress(0);
+      return;
+    }
+
+    await completeLocalToolUsage(usageReservation);
+    pendingReservationId = null;
+    setResult(extractedText);
+    setStatus(t.completed);
+    setProgress(100);
+    try {
+      await saveToolHistoryClient({
+        toolType: "image-to-text",
+        fileName: file.name,
+        result: extractedText,
+        metadata: { language, mode: "standard" },
       });
-
-    if (insertError) throw insertError;
-
-    setSaveMessage(t.saved);
+      setSaveMessage(t.saved);
+    } catch (historyError) {
+      console.error("Standard OCR history save failed:", historyError);
+      setError("Text extracted, but it could not be saved to history. Please try again later.");
+    }
   } catch (err) {
-    console.error("Save extraction error:", err);
-    setError(t.saveError);
+    console.error("OCR error:", err);
+
+    setError(
+      mode === "ai" && err instanceof Error
+        ? err.message
+        : t.extractionError
+    );
+
+    setStatus("");
+    setProgress(0);
   } finally {
-    setSaving(false);
+    if (pendingReservationId) {
+      try {
+        await releaseLocalToolUsage(pendingReservationId);
+      } catch (releaseError) {
+        console.error("Could not release failed OCR usage reservation", releaseError);
+      }
+    }
+
+    if (worker) {
+      try {
+        await worker.terminate();
+      } catch (terminationError) {
+        console.error("OCR worker cleanup error:", terminationError);
+      }
+    }
+
+    setLoading(false);
   }
 }
+
+  async function saveExtraction() {
+    if (!file || !result.trim() || saving || loading) return;
+
+    setSaving(true);
+    setError("");
+    setSaveMessage("");
+
+    try {
+      const supabase = createClient();
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) throw userError;
+
+      if (!user) {
+        setError(t.loginRequired);
+        return;
+      }
+
+      const { error: saveError } = await supabase.from("tool_history").insert({
+        user_id: user.id,
+        tool_type: "image-to-text",
+        file_name: file.name,
+        result_text: result,
+        metadata: { language },
+      });
+      if (saveError) throw saveError;
+
+      setSaveMessage(t.saved);
+    } catch (err) {
+      console.error("Save extraction error:", err);
+
+  const saveErr = err as {
+    message?: string;
+    details?: string;
+    hint?: string;
+    code?: string;
+  };
+
+  const errorDetails = [
+    saveErr.message,
+    saveErr.details,
+    saveErr.hint,
+    saveErr.code ? `Code: ${saveErr.code}` : "",
+  ]
+    .filter(Boolean)
+    .join(" | ");
+
+  setError(errorDetails || t.saveError);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function copyText() {
+    if (!result.trim()) {
+      setError(t.noText);
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(result);
+      setError("");
       setStatus(t.copied);
-    } catch {
+    } catch (err) {
+      console.error("Clipboard error:", err);
       setError(t.copyError);
     }
   }
 
   function downloadText() {
-    const blob = new Blob([result], {
-      type: "text/plain;charset=utf-8",
-    });
+    if (!result.trim()) {
+      setError(t.noText);
+      return;
+    }
 
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    let url: string | null = null;
 
-    link.href = url;
-    link.download = "snaptext-extracted-text.txt";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    try {
+      const blob = new Blob([result], {
+        type: "text/plain;charset=utf-8",
+      });
 
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "snaptext-extracted-text.txt";
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error("Download error:", err);
+
+      setError(
+        uiLanguage === "fr"
+          ? "Impossible de télécharger le fichier texte."
+          : "Unable to download the text file."
+      );
+    } finally {
+      if (url) {
+        const objectUrl = url;
+
+        window.setTimeout(() => {
+          URL.revokeObjectURL(objectUrl);
+        }, 1000);
+      }
+    }
   }
 
   return (
-    <section className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+    <section className="mx-auto mt-6 w-full max-w-6xl rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
       <div className="mb-6 flex flex-wrap items-center justify-end gap-3">
         <label
           htmlFor="ui-language"
@@ -378,6 +566,7 @@ async function saveExtraction() {
           <div className="flex flex-col gap-5 sm:flex-row">
             {previewUrl && (
               <img
+                loading="lazy"
                 src={previewUrl}
                 alt="Selected image preview"
                 className="max-h-72 w-full rounded-lg border border-slate-200 object-contain sm:w-1/2"
@@ -399,7 +588,7 @@ async function saveExtraction() {
 
               <button
                 type="button"
-                disabled={loading}
+                disabled={loading || saving}
                 onClick={removeImage}
                 className="mt-5 w-fit rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
               >
@@ -423,49 +612,104 @@ async function saveExtraction() {
             <select
               id="ocr-language"
               value={language}
-              disabled={loading}
+              disabled={loading || saving}
               onChange={(e) =>
                 setLanguage(e.target.value as OcrLanguage)
               }
-              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100"
+              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100 disabled:opacity-60"
             >
               <option value="both">{t.both}</option>
               <option value="eng">{t.english}</option>
               <option value="fra">{t.french}</option>
             </select>
           </div>
+<div>
+  <label className="mb-3 block text-sm font-medium text-slate-700">
+    OCR Mode
+  </label>
 
+  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <button
+      type="button"
+      disabled={loading || saving}
+      onClick={() => changeMode("standard")}
+      className={`rounded-xl border p-4 text-left transition ${
+        mode === "standard"
+          ? "border-violet-500 bg-violet-50 ring-2 ring-violet-100"
+          : "border-slate-200 hover:border-violet-300"
+      }`}
+    >
+      <span className="block font-semibold text-slate-900">
+        {t.standard}
+      </span>
+      <span className="mt-1 block text-xs text-slate-500">
+        Tesseract.js · Local processing
+      </span>
+    </button>
+
+    <button
+      type="button"
+      disabled={loading || saving}
+      onClick={() => changeMode("ai")}
+      className={`rounded-xl border p-4 text-left transition ${
+        mode === "ai"
+          ? "border-violet-500 bg-violet-50 ring-2 ring-violet-100"
+          : "border-slate-200 hover:border-violet-300"
+      } disabled:cursor-not-allowed disabled:opacity-60`}
+    >
+      <span className="flex items-center justify-between gap-2 font-semibold text-slate-900">
+        {t.aiEnhanced}
+        <span className="rounded-full bg-violet-100 px-2 py-1 text-xs text-violet-700">
+          PRO
+        </span>
+      </span>
+
+      <span className="mt-1 block text-xs text-slate-500">
+        Cloudflare AI · Enhanced extraction
+      </span>
+
+
+    </button>
+  </div>
+</div>
           <button
             type="button"
             onClick={extractText}
-            disabled={loading}
+            disabled={loading || saving}
             className="w-full rounded-lg bg-violet-600 px-5 py-3 font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? t.extracting : t.extract}
           </button>
         </div>
+
       )}
 
       {loading && (
-        <div className="mt-6 space-y-3">
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-600">
-              {status || t.processing}
-            </span>
+  <div className="mt-6 space-y-3">
+    <div className="flex justify-between text-sm">
+      <span className="text-slate-600">
+        {status || t.processing}
+      </span>
 
-            <span className="font-semibold text-violet-700">
-              {progress}%
-            </span>
-          </div>
-
-          <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-            <div
-              className="h-full rounded-full bg-violet-600 transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
+      {mode === "standard" && (
+        <span className="font-semibold text-violet-700">
+          {progress}%
+        </span>
       )}
+    </div>
+
+    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+      {mode === "ai" ? (
+        <div className="h-full w-1/3 animate-pulse rounded-full bg-violet-600" />
+      ) : (
+        <div
+          className="h-full rounded-full bg-violet-600 transition-all duration-300"
+          style={{ width: `${progress}%` }}
+        />
+      )}
+    </div>
+  </div>
+)}
 
       {error && (
         <p
@@ -491,21 +735,33 @@ async function saveExtraction() {
 
           <textarea
             value={result}
-            onChange={(e) => setResult(e.target.value)}
+            onChange={(e) => {
+              setResult(e.target.value);
+              setSaveMessage("");
+              setStatus("");
+            }}
             rows={10}
             className="w-full rounded-xl border border-slate-300 p-4 text-sm leading-6 text-slate-800 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100"
             placeholder={t.placeholder}
           />
 
           <div className="mt-4 flex flex-wrap gap-3">
-         <button
-  type="button"
-  onClick={saveExtraction}
-  disabled={saving}
-  className="rounded-lg border border-violet-300 bg-violet-50 px-5 py-3 text-sm font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
->
-  {saving ? t.saving : t.save}
-</button>
+            <button
+              type="button"
+              onClick={saveExtraction}
+              disabled={saving || loading || saveMessage === t.saved}
+              className="rounded-lg border border-violet-300 bg-violet-50 px-5 py-3 text-sm font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saveMessage === t.saved ? t.saved : saving ? t.saving : t.save}
+            </button>
+
+            <button
+              type="button"
+              onClick={copyText}
+              className="rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              {t.copy}
+            </button>
 
             <button
               type="button"
@@ -515,22 +771,23 @@ async function saveExtraction() {
               {t.download}
             </button>
           </div>
-{saveMessage && (
-  <p className="mt-3 text-sm text-green-700">
-    {saveMessage}
-  </p>
-)}
+
+          {saveMessage && (
+            <p className="mt-3 text-sm text-green-700">
+              {saveMessage}
+            </p>
+          )}
+
           {status === t.copied && (
             <p className="mt-3 text-sm text-green-700">
               {t.copiedNotice}
             </p>
           )}
         </div>
-        
       )}
 
       <p className="mt-6 text-center text-xs text-slate-400">
-        {t.privacy}
+        {mode === "ai" ? t.aiPrivacy : t.standardPrivacy}
       </p>
     </section>
   );

@@ -32,7 +32,29 @@ export async function proxy(request: NextRequest) {
     }
   );
 
+  // Refresh and validate the Supabase session
   await supabase.auth.getClaims();
+
+  // Prevent private pages from being indexed
+  const pathname = request.nextUrl.pathname;
+
+  const privateRoutes = [
+    "/dashboard",
+    "/account",
+    "/settings",
+  ];
+
+  const isPrivateRoute = privateRoutes.some(
+    (route) =>
+      pathname === route || pathname.startsWith(`${route}/`)
+  );
+
+  if (isPrivateRoute) {
+    supabaseResponse.headers.set(
+      "X-Robots-Tag",
+      "noindex, nofollow"
+    );
+  }
 
   return supabaseResponse;
 }

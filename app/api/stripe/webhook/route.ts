@@ -57,23 +57,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true });
     }
 
-    // Check whether this event has already been processed.
-    const { data: existingEvent, error: lookupError } =
-      await supabaseAdmin
-        .from("stripe_webhook_events")
-        .select("id")
-        .eq("id", event.id)
-        .maybeSingle();
-
-    if (lookupError) {
-      throw lookupError;
-    }
-
-    if (existingEvent) {
-      return NextResponse.json({
-        received: true,
-        duplicate: true,
-      });
+    // Claim the event atomically. The unique event ID makes concurrent deliveries idempotent.
+    const { error: claimError } = await supabaseAdmin
+      .from("stripe_webhook_events")
+      .insert({ id: event.id, event_type: event.type });
+    if (claimError) {
+      if (claimError.code === "23505") {
+        return NextResponse.json({ received: true, duplicate: true });
+      }
+      throw claimError;
     }
 
     let subscriptionId: string | null = null;
@@ -155,18 +147,6 @@ export async function POST(request: Request) {
       throw subscriptionError;
     }
 
-    // Record the event only after the subscription update succeeds.
-    const { error: eventError } = await supabaseAdmin
-      .from("stripe_webhook_events")
-      .insert({
-        id: event.id,
-        event_type: event.type,
-      });
-
-    if (eventError) {
-      throw eventError;
-    }
-
     console.log("Stripe subscription synchronized:", subscription.id);
 
     return NextResponse.json({
@@ -174,6 +154,8 @@ export async function POST(request: Request) {
       subscriptionUpdated: true,
     });
   } catch (error) {
+    // Release the claim on failure so Stripe's retry can process the event again.
+    await supabaseAdmin.from("stripe_webhook_events").delete().eq("id", event.id);
     console.error("Stripe webhook processing error:", error);
 
     return NextResponse.json(

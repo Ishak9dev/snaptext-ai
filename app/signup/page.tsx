@@ -4,6 +4,19 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { absoluteUrl } from "@/lib/seo";
+
+function getSafeNextPath() {
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get("next");
+
+  if (next && next.startsWith("/") && !next.startsWith("//")) {
+    return next;
+  }
+
+  // Normal signup from the landing page returns to the landing page.
+  return "/";
+}
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -27,12 +40,17 @@ export default function SignupPage() {
 
     try {
       const supabase = createClient();
+      const nextPath = getSafeNextPath();
+
+      const callbackUrl = new URL(absoluteUrl("/auth/callback"));
+
+      callbackUrl.searchParams.set("next", nextPath);
 
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: callbackUrl.toString(),
         },
       });
 
@@ -52,6 +70,11 @@ export default function SignupPage() {
       setLoading(false);
     }
   }
+
+  const loginHref =
+    typeof window !== "undefined"
+      ? `/login${window.location.search}`
+      : "/login";
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
@@ -143,7 +166,7 @@ export default function SignupPage() {
         <p className="mt-6 text-center text-sm text-slate-500">
           Already have an account?{" "}
           <Link
-            href="/login"
+            href={loginHref}
             className="font-semibold text-violet-700 hover:text-violet-800"
           >
             Sign in

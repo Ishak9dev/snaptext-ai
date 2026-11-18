@@ -1,0 +1,46 @@
+
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ScanText } from "lucide-react";
+
+import { createClient } from "@/lib/supabase/server";
+import ImageToPdf from "@/components/image-to-pdf";
+
+// Allow this authenticated page to render at request time.
+export const instant = false;
+
+export default async function ImageToPdfPage() {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.auth.getClaims();
+
+  if (error || !data?.claims) {
+    redirect("/login?next=/dashboard/image-to-pdf");
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-50">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white">
+              <ScanText size={20} />
+            </div>
+
+            <span className="text-lg font-bold text-slate-900">
+              SnapText <span className="text-violet-600">AI</span>
+            </span>
+          </Link>
+
+        </div>
+      </header>
+
+      <section className="mx-auto max-w-7xl px-5 py-12">
+        <ImageToPdf />
+      </section>
+    </main>
+  );
+}

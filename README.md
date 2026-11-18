@@ -16,6 +16,14 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Public application URL
+
+Set `NEXT_PUBLIC_APP_URL` to the public origin used for canonical metadata, sitemap entries, authentication email callbacks, and billing return URLs. Local development uses `http://localhost:3000`; production should use `https://snaptextai.app`. See `.env.example`. The older `NEXT_PUBLIC_SITE_URL` remains supported as a fallback for existing environments.
+
+## Stripe yearly plan
+
+Create or reuse a **Test mode** recurring EUR Price for €29.99 every 12 months, then set its Price ID as `STRIPE_YEARLY_PRICE_ID` in local development and later in the deployment environment. The existing monthly Price continues to use `STRIPE_PRO_PRICE_ID`. Never place Stripe secret keys or Price IDs in client-side code.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

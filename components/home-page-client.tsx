@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -12,7 +12,6 @@ import {
   ClipboardList,
   ArrowRight,
   Check,
-  ChevronDown,
   FileImage,
   FileText,
   Languages,
@@ -30,25 +29,10 @@ import {
   Minimize2,
   Scissors,
   LockKeyhole,
-  CircleUserRound,
-  LogOut,
   
 } from "lucide-react";
 
 type Language = "en" | "fr";
-
-function subscribeToCheckoutNavigation(onChange: () => void) {
-  window.addEventListener("popstate", onChange);
-  return () => window.removeEventListener("popstate", onChange);
-}
-
-function getCheckoutFromLocation() {
-  return new URLSearchParams(window.location.search).get("checkout") || "";
-}
-
-function getServerCheckout() {
-  return "";
-}
 
 const translations = {
   en: {
@@ -395,12 +379,6 @@ const howIcons = [
   UploadCloud,
   FileText,
 ];
-type AccountInfo = {
-  isPro: boolean;
-  used: number;
-  limit: number;
-  statusLabel: string;
-};
 type StripePriceSummary = {
   amountCents: number;
   currency: string;
@@ -422,13 +400,6 @@ export default function Home({ initialLanguage = "en" }: { initialLanguage?: Lan
   const [checkoutErrorPlan, setCheckoutErrorPlan] = useState<"monthly" | "yearly" | null>(null);
   const [stripePricing, setStripePricing] = useState<StripePricingSummary | null>(null);
   const [pricingLoaded, setPricingLoaded] = useState(false);
-const [accountInfo, setAccountInfo] = useState<AccountInfo | null>(null);
-const [accountLoading, setAccountLoading] = useState(false);
-const checkout = useSyncExternalStore(
-  subscribeToCheckoutNavigation,
-  getCheckoutFromLocation,
-  getServerCheckout
-);
   const t = translations[lang];
   const dashboardHref = lang === "fr" ? "/fr/dashboard" : "/dashboard";
 
@@ -608,10 +579,8 @@ const checkout = useSyncExternalStore(
   ];
 const [user, setUser] = useState<User | null>(null);
 const [authLoading, setAuthLoading] = useState(true);
-const [userMenuOpen, setUserMenuOpen] = useState(false);
 const [toolSearch, setToolSearch] = useState("");
 const [toolCategory, setToolCategory] = useState("All tools");
-const [portalLoading, setPortalLoading] = useState(false);
 
 useEffect(() => {
   const supabase = createClient();
@@ -634,7 +603,6 @@ useEffect(() => {
     if (mounted) {
       setUser(session?.user ?? null);
       setAuthLoading(false);
-      setUserMenuOpen(false);
     }
   });
 
@@ -643,148 +611,6 @@ useEffect(() => {
     subscription.unsubscribe();
   };
 }, []);
-useEffect(() => {
-  if (!user) {
-    return;
-  }
-
-  let mounted = true;
-
-  async function loadAccountInfo() {
-    setAccountLoading(true);
-
-    try {
-      const supabase = createClient();
-
-      // After Stripe checkout, retry while waiting for
-      // the webhook to update the subscription.
-      const maxAttempts = checkout === "success" ? 15 : 1;
-
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        if (!mounted) return;
-
-        const { data: usageData, error: usageError } =
-          await supabase.rpc("get_my_tool_usage");
-
-        if (usageError) throw usageError;
-
-        const usageRows = usageData ?? [];
-        const usage = usageRows[0];
-        if (!usage) throw new Error("Unable to retrieve usage.");
-
-       let subscription = null;
-let subscriptionError = null;
-
-if (user) {
-  const result = await supabase
-    .from("subscriptions")
-    .select("status, current_period_end, cancel_at_period_end")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  subscription = result.data;
-  subscriptionError = result.error;
-}
-
-        if (subscriptionError) throw subscriptionError;
-
-        const isPro = Boolean(usage.is_pro);
-        const status = subscription?.status ?? "inactive";
-
-        const statusLabel =
-          isPro && subscription?.cancel_at_period_end
-            ? (lang === "fr"
-                ? "Résiliation en fin de période"
-                : "Cancels at period end")
-            : status === "active"
-              ? (lang === "fr" ? "Actif" : "Active")
-              : status === "trialing"
-                ? (lang === "fr" ? "Essai" : "Trial")
-                : status === "past_due"
-                  ? (lang === "fr"
-                      ? "Paiement en retard"
-                      : "Payment past due")
-                  : status === "canceled"
-                    ? (lang === "fr"
-                        ? "Résilié"
-                        : "Cancelled")
-                    : subscription?.current_period_end &&
-                        new Date(subscription.current_period_end) <= new Date()
-                      ? (lang === "fr" ? "Expiré" : "Expired")
-                      : (lang === "fr" ? "Inactif" : "Inactive");
-
-        if (mounted) {
-          setAccountInfo({
-            isPro,
-            used: usageRows.reduce((total: number, row: { used_count: number }) => total + Number(row.used_count), 0),
-            limit: usageRows.length * 2,
-            statusLabel,
-          });
-        }
-
-        // Stop polling as soon as Pro is activated.
-        if (isPro) break;
-
-        // Wait 2 seconds before checking again.
-        if (attempt < maxAttempts - 1) {
-          await new Promise((resolve) =>
-            setTimeout(resolve, 2000)
-          );
-        }
-      }
-    } catch (error) {
-      console.error("Account information error:", error);
-    } finally {
-      if (mounted) {
-        setAccountLoading(false);
-      }
-    }
-  }
-
-  loadAccountInfo();
-
-  return () => {
-    mounted = false;
-  };
-}, [user, lang, checkout]);
-
-const metadataName =
-  user?.user_metadata?.full_name ||
-  user?.user_metadata?.name;
-
-const displayName =
-  (typeof metadataName === "string" ? metadataName : "") ||
-  user?.email?.split("@")[0] ||
-  "Account";
-
-async function handleManageSubscription() {
-  if (portalLoading) return;
-  setPortalLoading(true);
-  try {
-    const response = await fetch("/api/stripe/portal", { method: "POST" });
-    const payload = await response.json();
-    if (!response.ok || !payload.url) throw new Error(payload.error || "Unable to open billing portal.");
-    window.location.assign(payload.url);
-  } catch (error) {
-    console.error("Billing portal error:", error);
-    setCheckoutError(lang === "fr" ? "Impossible d'ouvrir la gestion de l'abonnement." : "Unable to open subscription management.");
-  } finally { setPortalLoading(false); }
-}
-
-async function handleLogout() {
-  const supabase = createClient();
-
-  const { error } = await supabase.auth.signOut();
-
-  if (error) {
-    console.error("Logout error:", error);
-    return;
-  }
-
-  setUser(null);
-  setUserMenuOpen(false);
-  router.push("/");
-}
   function closeMobileMenu() {
     setMobileOpen(false);
   }
@@ -800,7 +626,7 @@ async function handleLogout() {
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, locale: lang }),
       });
 
       if (response.status === 401) {
@@ -877,22 +703,12 @@ async function handleLogout() {
               {t.navPricing}
             </a>
           </nav>
-
           <div className="relative hidden lg:block">
             <input aria-label="Search tools" value={toolSearch} onChange={(event) => setToolSearch(event.target.value)} placeholder={lang === "fr" ? "Rechercher un outil…" : "Search tools…"} className="w-44 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:w-56 focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-100" />
             {toolSearch.trim() && <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">{tools.filter((tool) => `${tool.title} ${tool.description}`.toLowerCase().includes(toolSearch.toLowerCase())).slice(0, 6).map((tool) => <Link key={tool.title} href={tool.href} onClick={() => setToolSearch("")} className="block rounded-lg px-3 py-2 text-sm hover:bg-violet-50"><span className="font-semibold text-slate-800">{tool.title}</span><span className="mt-0.5 block line-clamp-1 text-xs text-slate-500">{tool.description}</span></Link>)}{tools.every((tool) => !`${tool.title} ${tool.description}`.toLowerCase().includes(toolSearch.toLowerCase())) && <p className="px-3 py-2 text-sm text-slate-500">No matching tools found.</p>}</div>}
           </div>
 
           <div className="hidden items-center gap-3 md:flex">
-            <button
-              onClick={() => window.location.assign(lang === "en" ? "/fr" : "/")}
-              className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
-              aria-label="Change language"
-            >
-              <Languages size={17} />
-              {lang.toUpperCase()}
-              <ChevronDown size={14} />
-            </button>
 
            {!authLoading && !user && (
   <>
@@ -913,66 +729,11 @@ async function handleLogout() {
 )}
 
 {!authLoading && user && (
-  <div className="relative">
-    <button
-      type="button"
-      onClick={() => setUserMenuOpen(!userMenuOpen)}
-      className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 hover:bg-slate-50"
-      aria-expanded={userMenuOpen}
-    >
-      <CircleUserRound
-        size={23}
-        className="text-violet-600"
-      />
-
-      <span className="max-w-32 truncate text-sm font-semibold text-slate-700">
-        {displayName}
-      </span>
-
-      <ChevronDown size={15} />
-    </button>
-
-    {userMenuOpen && (
-      <div className="absolute right-0 top-full z-50 mt-3 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
-        <div className="border-b border-slate-100 px-3 py-3">
-          <p className="truncate text-sm font-semibold text-slate-900">
-            {displayName}
-          </p>
-
-          <p className="truncate text-xs text-slate-500">
-            {user.email}
-          </p>
-        </div>
-
-        <Link
-          href={dashboardHref}
-          onClick={() => setUserMenuOpen(false)}
-          className="mt-2 block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-violet-50 hover:text-violet-700"
-        >
-          {t.dashboard}
-        </Link>
-
-        <Link
-          href={lang === "fr" ? "/fr/dashboard/history" : "/dashboard/history"}
-          onClick={() => setUserMenuOpen(false)}
-          className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-violet-50 hover:text-violet-700"
-        >
-          {t.history}
-        </Link>
-        <button type="button" onClick={handleManageSubscription} disabled={portalLoading} className="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-violet-50 hover:text-violet-700 disabled:opacity-50">{lang === "fr" ? "Gérer l'abonnement" : "Manage subscription"}</button>
-
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
-        >
-          <LogOut size={16} />
-          {lang === "fr" ? "Déconnexion" : "Sign out"}
-        </button>
-      </div>
-    )}
-  </div>
+  <Link href={dashboardHref} className="rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-violet-200 transition hover:bg-violet-700">
+    {t.dashboard}
+  </Link>
 )}
+
           </div>
 
           <button
@@ -1004,14 +765,6 @@ async function handleLogout() {
                 {t.navPricing}
               </a>
 
-              <button
-                onClick={() => window.location.assign(lang === "en" ? "/fr" : "/")}
-                className="text-left font-semibold text-violet-600"
-              >
-                {lang === "en"
-                  ? "Passer en français"
-                  : "Switch to English"}
-              </button>
 
              {!authLoading && !user && (
   <>
@@ -1034,196 +787,15 @@ async function handleLogout() {
 )}
 
 {!authLoading && user && (
-  <div className="rounded-xl border border-slate-200 p-4">
-    <div className="mb-3 flex items-center gap-3">
-      <CircleUserRound
-        size={27}
-        className="text-violet-600"
-      />
+  <Link href={dashboardHref} onClick={closeMobileMenu} className="rounded-lg bg-violet-600 py-3 text-center font-semibold text-white">
+    {t.dashboard}
+  </Link>
+)}
 
-      <div className="min-w-0">
-        <p className="truncate text-sm font-bold text-slate-900">
-          {displayName}
-        </p>
-
-        <p className="truncate text-xs text-slate-500">
-          {user.email}
-        </p>
-      </div>
-    </div>
-
-    <Link
-      href={dashboardHref}
-      onClick={closeMobileMenu}
-      className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-violet-50"
-    >
-      {t.dashboard}
-    </Link>
-
-    <Link
-      href={lang === "fr" ? "/fr/dashboard/history" : "/dashboard/history"}
-      onClick={closeMobileMenu}
-      className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-violet-50"
-    >
-      {t.history}
-    </Link>
-    <button type="button" onClick={handleManageSubscription} disabled={portalLoading} className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-violet-50">{lang === "fr" ? "Gérer l'abonnement" : "Manage subscription"}</button>
-
-    <button
-      type="button"
-      onClick={handleLogout}
-      className="mt-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-    >
-      <LogOut size={16} />
-      {lang === "fr" ? "Déconnexion" : "Sign out"}
-    </button>
-  </div>
-)} 
-            </nav> 
+</nav>
           </div>
         )}
       </header>
-{/* LOGGED-IN ACCOUNT SECTION */}
-{user && (
-  <section className="border-b border-slate-100 bg-violet-50/50 px-5 py-8">
-    <div className="mx-auto max-w-7xl">
-      {checkout === "success" && (
-        <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-5">
-          <p className="font-bold text-green-800">
-            {lang === "fr" ? "Abonnement réussi !" : "Subscription successful!"}
-          </p>
-          <p className="mt-1 text-sm text-green-700">
-            {lang === "fr"
-              ? "Merci d'avoir choisi SnapText AI Pro. Votre abonnement est en cours d'activation."
-              : "Thank you for upgrading to SnapText AI Pro. Your subscription is being activated."}
-          </p>
-        </div>
-      )}
-
-      {checkout === "cancelled" && (
-        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-5">
-          <p className="font-bold text-amber-800">
-            {lang === "fr" ? "Paiement annulé" : "Checkout cancelled"}
-          </p>
-          <p className="mt-1 text-sm text-amber-700">
-            {lang === "fr"
-              ? "Aucun paiement n'a été effectué. Vous pourrez passer à Pro quand vous le souhaitez."
-              : "No payment was made. You can upgrade to Pro whenever you're ready."}
-          </p>
-        </div>
-      )}
-
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <p className="text-sm font-semibold text-violet-600">
-          {lang === "fr" ? "VOTRE ESPACE" : "YOUR WORKSPACE"}
-        </p>
-
-        <h2 className="mt-2 text-2xl font-bold text-slate-900">
-          {lang === "fr" ? "Bienvenue sur SnapText AI !" : "Welcome to SnapText AI!"}
-        </h2>
-
-        <p className="mt-2 text-sm text-slate-500">
-          {lang === "fr"
-            ? "Consultez votre abonnement et commencez à utiliser vos outils."
-            : "Check your subscription and start using your tools."}
-        </p>
-
-        {accountLoading ? (
-          <p className="mt-6 text-sm text-slate-500">
-            {lang === "fr" ? "Chargement de votre compte..." : "Loading your account..."}
-          </p>
-        ) : accountInfo ? (
-          <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-slate-500">
-                  {lang === "fr" ? "VOTRE ABONNEMENT" : "YOUR CURRENT PLAN"}
-                </p>
-                <h3 className="mt-1 text-xl font-bold text-slate-900">
-                  {accountInfo.isPro ? "SnapText AI Pro" : "SnapText AI Free"}
-                </h3>
-              </div>
-
-              <span className="rounded-full bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-700">
-                {accountInfo.isPro ? "PRO" : "FREE"}
-              </span>
-
-              <div>
-                <p className="text-sm font-medium text-slate-500">
-                  {lang === "fr" ? "STATUT" : "SUBSCRIPTION STATUS"}
-                </p>
-                <p className="mt-1 text-sm font-semibold text-slate-800">
-                  {accountInfo.statusLabel}
-                </p>
-              </div>
-            </div>
-
-            {accountInfo.isPro ? (
-              <>
-                <p className="mt-4 text-sm text-slate-600">
-                  {lang === "fr"
-                    ? "Vous bénéficiez d'un accès illimité à tous les outils SnapText AI."
-                    : "You have unlimited access to all SnapText AI tools. Thank you for being a Pro member!"}
-                </p>
-
-                <button type="button" onClick={handleManageSubscription} disabled={portalLoading} className="mt-5 inline-block rounded-lg border border-violet-600 px-5 py-3 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 disabled:opacity-50">
-                  {lang === "fr" ? "Gérer mon abonnement" : "Manage subscription"}
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="mt-5 flex justify-between text-sm">
-                  <span className="font-medium text-slate-700">
-                    {lang === "fr"
-                      ? "Utilisation à vie de tous les outils"
-                      : "Lifetime usage across all tools"}
-                  </span>
-
-                  <span className="font-semibold text-violet-700">
-                    {accountInfo.used}/{accountInfo.limit}
-                  </span>
-                </div>
-
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
-                  <div
-                    className="h-full rounded-full bg-violet-600 transition-all"
-                    style={{
-                      width: `${Math.min(
-                        (accountInfo.used / accountInfo.limit) * 100,
-                        100
-                      )}%`,
-                    }}
-                  />
-                </div>
-
-                <p className="mt-3 text-sm text-slate-500">
-                  {lang === "fr"
-                    ? "Chaque outil comprend 2 utilisations gratuites à vie."
-                    : "You get two free lifetime uses for each individual tool."}
-                </p>
-
-                <Link
-                  href="#pricing"
-                  className="mt-5 inline-block rounded-lg bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-700"
-                >
-                  {lang === "fr"
-                    ? "Passer à Pro — 4,99 €/mois"
-                    : "Upgrade to Pro — €4.99/month"}
-                </Link>
-              </>
-            )}
-          </div>
-        ) : (
-          <p className="mt-5 text-sm text-slate-500">
-            {lang === "fr"
-              ? "Impossible de charger les informations de votre compte."
-              : "Unable to load your account information."}
-          </p>
-        )}
-      </div>
-    </div>
-  </section>
-)}
       {/* HERO */}
       <section className="relative overflow-hidden bg-gradient-to-b from-violet-50/80 via-white to-white px-5 pb-24 pt-20 lg:pt-28">
         <div className="pointer-events-none absolute -left-40 top-0 h-96 w-96 rounded-full bg-violet-200/30 blur-3xl" />

@@ -2,30 +2,16 @@ import Link from "next/link";
 import { ArrowRight, ScanText } from "lucide-react";
 import ToolUsageSummary from "@/components/tool-usage-summary";
 import { DASHBOARD_TOOLS } from "@/lib/dashboard-tools";
+import DashboardSubscription from "@/components/dashboard-subscription";
 
-export default function DashboardHome({ language = "en" }: { language?: "en" | "fr" }) {
+export default function DashboardHome({ language = "en", checkout }: { language?: "en" | "fr"; checkout?: string }) {
   const isFrench = language === "fr";
   const prefix = isFrench ? "/fr/dashboard" : "/dashboard";
 
   return (
     <main lang={language} className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-          <Link href={isFrench ? "/fr" : "/"} className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 text-white">
-              <ScanText size={20} aria-hidden="true" />
-            </span>
-            <span className="text-lg font-bold text-slate-900">
-              SnapText <span className="text-violet-600">AI</span>
-            </span>
-          </Link>
-          <p className="hidden text-sm font-medium text-slate-500 sm:block">
-            {isFrench ? "Votre espace de travail" : "Your workspace"}
-          </p>
-        </div>
-      </header>
-
       <section className="mx-auto max-w-7xl px-5 py-10 sm:py-14">
+        <DashboardSubscription language={language} checkout={checkout} />
         <ToolUsageSummary language={language} />
         <div className="mb-8 max-w-2xl">
           <p className="text-sm font-semibold uppercase tracking-wide text-violet-700">

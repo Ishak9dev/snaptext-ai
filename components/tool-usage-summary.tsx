@@ -16,7 +16,7 @@ export default function ToolUsageSummary({ language }: { language: "en" | "fr" }
   const [refresh, setRefresh] = useState(0);
   const isFrench = language === "fr";
   const translate = useWorkspaceTranslation();
-  const pricingHref = isFrench ? "/fr#pricing" : "/#pricing";
+  const pricingHref = isFrench ? "/fr/dashboard#subscription-heading" : "/dashboard#subscription-heading";
   const refreshUsage = useCallback(async () => {
     try {
       const supabase = createClient();

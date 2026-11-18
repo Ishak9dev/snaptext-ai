@@ -5,7 +5,7 @@ import DashboardHome from "@/components/dashboard-home";
 
 export const instant = false;
 
-export default async function BackgroundRemoverPage() {
+export default async function BackgroundRemoverPage({ searchParams }: { searchParams: Promise<{ checkout?: string }> }) {
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.getClaims();
@@ -14,5 +14,6 @@ export default async function BackgroundRemoverPage() {
     redirect("/login");
   }
 
-  return <DashboardHome />;
+  const { checkout } = await searchParams;
+  return <DashboardHome checkout={checkout} />;
 }

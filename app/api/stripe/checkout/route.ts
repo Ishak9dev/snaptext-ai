@@ -10,6 +10,7 @@ import {
 
 export async function POST(request: Request) {
   let plan: SubscriptionPlan = "monthly";
+  let locale: "en" | "fr" = "en";
   try {
     const supabase = await createClient();
     const {
@@ -39,6 +40,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Unknown subscription plan." }, { status: 400 });
       }
       plan = body.plan;
+      if ("locale" in body && body.locale !== "en" && body.locale !== "fr") {
+        return NextResponse.json({ error: "Unknown locale." }, { status: 400 });
+      }
+      if ("locale" in body) locale = body.locale as "en" | "fr";
     }
 
     const { data: existingSubscription, error: customerLookupError } = await supabase
@@ -99,8 +104,8 @@ export async function POST(request: Request) {
         subscription_data: {
           metadata: { supabaseUserId: user.id, planType: plan },
         },
-        success_url: `${APP_URL}/?checkout=success`,
-        cancel_url: `${APP_URL}/?checkout=cancelled`,
+        success_url: `${APP_URL}/${locale === "fr" ? "fr/" : ""}dashboard?checkout=success`,
+        cancel_url: `${APP_URL}/${locale === "fr" ? "fr/" : ""}dashboard?checkout=cancelled`,
       },
       // One key per user/subscription generation serializes simultaneous
       // monthly/yearly requests and makes retries reuse the same session.

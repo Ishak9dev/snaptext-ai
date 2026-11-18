@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import WorkspaceLanguageToggle from "@/components/workspace-language-toggle";
+import DashboardNavigation from "@/components/dashboard-navigation";
 import DashboardBackLink from "@/components/dashboard-back-link";
 
 export const metadata: Metadata = {
@@ -21,9 +21,9 @@ export default function FrenchDashboardLayout({
 }) {
   return (
     <>
+      <DashboardNavigation />
       <DashboardBackLink />
       {children}
-      <WorkspaceLanguageToggle />
     </>
   );
 }

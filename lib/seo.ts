@@ -1,9 +1,12 @@
-const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL;
+const configuredAppUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL;
 const defaultAppUrl = process.env.NODE_ENV === "production"
-  ? "https://snaptextai.app"
+  ? "https://www.snaptextai.app"
   : "http://localhost:3000";
 
-export const APP_URL = (configuredAppUrl || defaultAppUrl).replace(/\/+$/, "");
+const canonicalProductionUrl = process.env.VERCEL_ENV === "production"
+  ? "https://www.snaptextai.app"
+  : configuredAppUrl || defaultAppUrl;
+export const APP_URL = canonicalProductionUrl.replace(/\/+$/, "");
 // Keep the previous export available while consumers migrate to APP_URL.
 export const SITE_URL = APP_URL;
 export const SITE_NAME = "SnapText AI";

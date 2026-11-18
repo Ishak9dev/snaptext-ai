@@ -18,7 +18,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Public application URL
 
-Set `NEXT_PUBLIC_APP_URL` to the public origin used for canonical metadata, sitemap entries, authentication email callbacks, and billing return URLs. Local development uses `http://localhost:3000`; production should use `https://snaptextai.app`. See `.env.example`. The older `NEXT_PUBLIC_SITE_URL` remains supported as a fallback for existing environments.
+Set `NEXT_PUBLIC_SITE_URL` to the public origin used for canonical metadata, sitemap entries, authentication email callbacks, and billing return URLs. Local development uses `http://localhost:3000`; production uses `https://www.snaptextai.app`. Production deployments on Vercel enforce the www canonical origin. `NEXT_PUBLIC_APP_URL` remains supported as a legacy fallback. See `.env.example`.
 
 ## Stripe yearly plan
 

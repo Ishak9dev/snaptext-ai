@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowUpRight, CalendarDays, LoaderCircle } from "lucide-react";
 
-type PlanPrice = { amountCents: number; currency: string; interval: "month" | "year" };
+type PlanPrice = { id: string; amountCents: number; currency: string; interval: "month" | "year" };
 type State = { status: string; priceId: string | null; currentPeriodEnd: string | null; cancelAtPeriodEnd: boolean; isPremium: boolean; totalUsed: number; totalLimit: number };
 
 export default function DashboardSubscription({ language, checkout }: { language: "en" | "fr"; checkout?: string }) {
@@ -59,6 +59,7 @@ export default function DashboardSubscription({ language, checkout }: { language
   const money = (price: PlanPrice | null) => price ? new Intl.NumberFormat(fr ? "fr-FR" : "en-IE", { style: "currency", currency: price.currency.toUpperCase() }).format(price.amountCents / 100) : null;
   const date = state?.currentPeriodEnd ? new Intl.DateTimeFormat(fr ? "fr-FR" : "en-GB", { dateStyle: "long" }).format(new Date(state.currentPeriodEnd)) : null;
   const status = state?.status ?? "inactive";
+  const billingPrice = state?.priceId === prices.monthly?.id ? prices.monthly : state?.priceId === prices.yearly?.id ? prices.yearly : null;
   const statusLabel: Record<string, string> = fr ? { active: "Actif", trialing: "Essai", past_due: "Paiement en retard", canceled: "Résilié", unpaid: "Impayé", incomplete: "En attente", incomplete_expired: "Expiré" } : { active: "Active", trialing: "Trial", past_due: "Payment past due", canceled: "Canceled", unpaid: "Unpaid", incomplete: "Pending", incomplete_expired: "Expired" };
 
   const totalUsed = Math.max(0, state?.totalUsed ?? 0);
@@ -73,7 +74,7 @@ export default function DashboardSubscription({ language, checkout }: { language
     </div>
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div><p className="text-sm font-medium text-slate-500">{fr ? "VOTRE OFFRE ACTUELLE" : "YOUR CURRENT PLAN"}</p><h3 className="mt-1 text-xl font-bold text-slate-900">{state?.isPremium ? "SnapText AI Premium" : "SnapText AI Free"}</h3></div>
+        <div><p className="text-sm font-medium text-slate-500">{fr ? "VOTRE OFFRE ACTUELLE" : "YOUR CURRENT PLAN"}</p><h3 className="mt-1 text-xl font-bold text-slate-900">{state?.isPremium ? `SnapText AI Premium${billingPrice ? ` · ${fr ? (billingPrice.interval === "year" ? "Annuel" : "Mensuel") : (billingPrice.interval === "year" ? "Yearly" : "Monthly")}` : ""}` : "SnapText AI Free"}</h3></div>
         <span className="rounded-full bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-700">{state?.isPremium ? "PREMIUM" : "FREE"}</span>
         <div><p className="text-sm font-medium text-slate-500">{fr ? "STATUT DE L’ABONNEMENT" : "SUBSCRIPTION STATUS"}</p><p className="mt-1 text-sm font-semibold text-slate-800">{statusLabel[status] ?? status}</p></div>
       </div>

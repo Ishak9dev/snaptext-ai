@@ -8,10 +8,10 @@ export async function GET() {
   ]);
 
   const monthly = monthlyResult.status === "fulfilled"
-    ? { amountCents: monthlyResult.value.unit_amount!, currency: monthlyResult.value.currency, interval: "month" as const }
+    ? { id: monthlyResult.value.id, amountCents: monthlyResult.value.unit_amount!, currency: monthlyResult.value.currency, interval: "month" as const }
     : null;
   const yearly = yearlyResult.status === "fulfilled"
-    ? { amountCents: yearlyResult.value.unit_amount!, currency: yearlyResult.value.currency, interval: "year" as const }
+    ? { id: yearlyResult.value.id, amountCents: yearlyResult.value.unit_amount!, currency: yearlyResult.value.currency, interval: "year" as const }
     : null;
   const annualizedMonthlyCents = monthly ? monthly.amountCents * 12 : null;
   const savingsCents = annualizedMonthlyCents !== null && yearly

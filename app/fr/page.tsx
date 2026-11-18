@@ -1,13 +1,9 @@
 import type { Metadata } from "next";
 import HomePageClient from "@/components/home-page-client";
 import { absoluteUrl } from "@/lib/seo";
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
 
 const title = "Outils IA pour images et documents";
 const description = "Extrayez du texte, analysez des documents, scannez des reçus et optimisez vos images avec SnapText AI. Découvrez 10 outils en ligne, gratuitement.";
-
-export const instant = false;
 
 export const metadata: Metadata = {
   title, description,
@@ -16,12 +12,6 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title, description, images: ["/twitter-image"] },
 };
 
-export default async function FrenchHomePage({ searchParams }: { searchParams: Promise<{ checkout?: string }> }) {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-  if (data?.claims) {
-    const { checkout } = await searchParams;
-    if (checkout) redirect(`/fr/dashboard?checkout=${encodeURIComponent(checkout)}`);
-  }
+export default function FrenchHomePage() {
   return <HomePageClient initialLanguage="fr" />;
 }

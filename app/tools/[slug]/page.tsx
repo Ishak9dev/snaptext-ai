@@ -208,15 +208,32 @@ export default async function EnglishToolLandingPage({
 
   const pageUrl = absoluteUrl(`/tools/${slug}`);
 
-  const offers = [
-    {
-      "@type": "Offer",
-      name: "Free",
-      price: "0",
-      priceCurrency: "EUR",
-      description: "Two lifetime uses per tool.",
-    },
-  ];
+ const offers = [
+  {
+    "@type": "Offer",
+    name: "Free",
+    price: "0",
+    priceCurrency: "EUR",
+    description: "Two lifetime uses per tool.",
+    availability: "https://schema.org/InStock",
+  },
+  {
+    "@type": "Offer",
+    name: "Pro Monthly",
+    price: "2.99",
+    priceCurrency: "EUR",
+    description: "Unlimited access to all SnapText AI tools, billed monthly.",
+    availability: "https://schema.org/InStock",
+  },
+  {
+    "@type": "Offer",
+    name: "Pro Yearly",
+    price: "29.99",
+    priceCurrency: "EUR",
+    description: "Unlimited access to all SnapText AI tools, billed yearly.",
+    availability: "https://schema.org/InStock",
+  },
+];
 
   const structuredData = [
     {
@@ -227,19 +244,6 @@ export default async function EnglishToolLandingPage({
       operatingSystem: "Web",
       inLanguage: "en",
       description: tool.description,
-      url: pageUrl,
-      offers,
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "Product",
-      name: tool.name,
-      description: tool.description,
-      category: tool.category,
-      brand: {
-        "@type": "Brand",
-        name: "SnapText AI",
-      },
       url: pageUrl,
       offers,
     },

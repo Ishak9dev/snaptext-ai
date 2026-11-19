@@ -155,9 +155,32 @@ export default async function FrenchToolLandingPage({ params }: { params: Promis
   }
 
   const pageUrl = absoluteUrl(`/fr/outils/${slug}`);
-  const offers = [
-    { "@type": "Offer", name: "Gratuit", price: "0", priceCurrency: "EUR", description: "Deux utilisations à vie par outil." },
-  ];
+ const offers = [
+  {
+    "@type": "Offer",
+    name: "Free",
+    price: "0",
+    priceCurrency: "EUR",
+    description: "Two lifetime uses per tool.",
+    availability: "https://schema.org/InStock",
+  },
+  {
+    "@type": "Offer",
+    name: "Pro Monthly",
+    price: "2.99",
+    priceCurrency: "EUR",
+    description: "Unlimited access to all SnapText AI tools, billed monthly.",
+    availability: "https://schema.org/InStock",
+  },
+  {
+    "@type": "Offer",
+    name: "Pro Yearly",
+    price: "29.99",
+    priceCurrency: "EUR",
+    description: "Unlimited access to all SnapText AI tools, billed yearly.",
+    availability: "https://schema.org/InStock",
+  },
+];
   const structuredData = [
     { "@context": "https://schema.org", "@type": "SoftwareApplication", name: tool.name, applicationCategory: "UtilitiesApplication", operatingSystem: "Web", inLanguage: "fr", description: tool.description, url: pageUrl, offers },
     { "@context": "https://schema.org", "@type": "Product", name: tool.name, description: tool.description, category: tool.category, brand: { "@type": "Brand", name: "SnapText AI" }, url: pageUrl, offers },

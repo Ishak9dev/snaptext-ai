@@ -26,9 +26,16 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 const organizationSchema = {
-  "@context": "https://schema.org", "@type": "Organization", name: SITE_NAME,
-  url: absoluteUrl("/"), logo: absoluteUrl("/favicon.ico"),
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: SITE_NAME,
+  url: absoluteUrl("/"),
+  logo: absoluteUrl("/favicon.ico"),
   description: SITE_DESCRIPTION,
+  hasMerchantReturnPolicy: {
+    "@type": "MerchantReturnPolicy",
+    merchantReturnLink: absoluteUrl("/legal/refunds"),
+  },
 };
 const websiteSchema = {
   "@context": "https://schema.org", "@type": "WebSite", name: SITE_NAME,

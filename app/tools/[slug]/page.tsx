@@ -208,32 +208,37 @@ export default async function EnglishToolLandingPage({
 
   const pageUrl = absoluteUrl(`/tools/${slug}`);
 
- const offers = [
-  {
-    "@type": "Offer",
-    name: "Free",
-    price: "0",
-    priceCurrency: "EUR",
-    description: "Two lifetime uses per tool.",
-    availability: "https://schema.org/InStock",
-  },
-  {
-    "@type": "Offer",
-    name: "Pro Monthly",
-    price: "2.99",
-    priceCurrency: "EUR",
-    description: "Unlimited access to all SnapText AI tools, billed monthly.",
-    availability: "https://schema.org/InStock",
-  },
-  {
-    "@type": "Offer",
-    name: "Pro Yearly",
-    price: "29.99",
-    priceCurrency: "EUR",
-    description: "Unlimited access to all SnapText AI tools, billed yearly.",
-    availability: "https://schema.org/InStock",
-  },
-];
+  // SnapText AI offers are digital software subscriptions, not physical goods.
+  // Keep these offers under SoftwareApplication; do not add Product markup
+  // or fictional shipping details for digital plans.
+  const offers = [
+    {
+      "@type": "Offer",
+      name: "Free",
+      price: "0",
+      priceCurrency: "EUR",
+      description: "Two lifetime uses per tool.",
+      availability: "https://schema.org/InStock",
+    },
+    {
+      "@type": "Offer",
+      name: "Pro Monthly",
+      price: "2.99",
+      priceCurrency: "EUR",
+      description:
+        "Unlimited access to all SnapText AI tools, billed monthly.",
+      availability: "https://schema.org/InStock",
+    },
+    {
+      "@type": "Offer",
+      name: "Pro Yearly",
+      price: "29.99",
+      priceCurrency: "EUR",
+      description:
+        "Unlimited access to all SnapText AI tools, billed yearly.",
+      availability: "https://schema.org/InStock",
+    },
+  ];
 
   const structuredData = [
     {

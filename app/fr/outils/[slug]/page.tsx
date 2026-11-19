@@ -155,36 +155,61 @@ export default async function FrenchToolLandingPage({ params }: { params: Promis
   }
 
   const pageUrl = absoluteUrl(`/fr/outils/${slug}`);
- const offers = [
-  {
-    "@type": "Offer",
-    name: "Free",
-    price: "0",
-    priceCurrency: "EUR",
-    description: "Two lifetime uses per tool.",
-    availability: "https://schema.org/InStock",
-  },
-  {
-    "@type": "Offer",
-    name: "Pro Monthly",
-    price: "2.99",
-    priceCurrency: "EUR",
-    description: "Unlimited access to all SnapText AI tools, billed monthly.",
-    availability: "https://schema.org/InStock",
-  },
-  {
-    "@type": "Offer",
-    name: "Pro Yearly",
-    price: "29.99",
-    priceCurrency: "EUR",
-    description: "Unlimited access to all SnapText AI tools, billed yearly.",
-    availability: "https://schema.org/InStock",
-  },
-];
+  // Les offres SnapText AI sont des abonnements logiciels numériques,
+  // et non des produits physiques. Elles restent donc liées à SoftwareApplication.
+  // Ne pas ajouter de données d'expédition fictives ni de balisage Product ici.
+  const offers = [
+    {
+      "@type": "Offer",
+      name: "Gratuit",
+      price: "0",
+      priceCurrency: "EUR",
+      description: "Deux utilisations à vie par outil.",
+      availability: "https://schema.org/InStock",
+    },
+    {
+      "@type": "Offer",
+      name: "Pro mensuel",
+      price: "2.99",
+      priceCurrency: "EUR",
+      description: "Accès illimité à tous les outils SnapText AI, facturé mensuellement.",
+      availability: "https://schema.org/InStock",
+    },
+    {
+      "@type": "Offer",
+      name: "Pro annuel",
+      price: "29.99",
+      priceCurrency: "EUR",
+      description: "Accès illimité à tous les outils SnapText AI, facturé annuellement.",
+      availability: "https://schema.org/InStock",
+    },
+  ];
+
   const structuredData = [
-    { "@context": "https://schema.org", "@type": "SoftwareApplication", name: tool.name, applicationCategory: "UtilitiesApplication", operatingSystem: "Web", inLanguage: "fr", description: tool.description, url: pageUrl, offers },
-    { "@context": "https://schema.org", "@type": "Product", name: tool.name, description: tool.description, category: tool.category, brand: { "@type": "Brand", name: "SnapText AI" }, url: pageUrl, offers },
-    { "@context": "https://schema.org", "@type": "FAQPage", inLanguage: "fr", mainEntity: tool.faqs.map((faq) => ({ "@type": "Question", name: faq.question, acceptedAnswer: { "@type": "Answer", text: faq.answer } })) },
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: tool.name,
+      applicationCategory: "UtilitiesApplication",
+      operatingSystem: "Web",
+      inLanguage: "fr",
+      description: tool.description,
+      url: pageUrl,
+      offers,
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      inLanguage: "fr",
+      mainEntity: tool.faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: faq.answer,
+        },
+      })),
+    },
   ];
 
   return (

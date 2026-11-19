@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { stripe } from "@/lib/stripe";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getStripeClient } from "@/lib/stripe";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const HANDLED_EVENTS = new Set([
   "checkout.session.completed", "customer.subscription.created",
@@ -22,6 +22,14 @@ export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
   if (!signature) return NextResponse.json({ error: "Missing Stripe signature." }, { status: 400 });
 
+  let stripe: ReturnType<typeof getStripeClient>;
+  try {
+    stripe = getStripeClient();
+  } catch {
+    console.error("Stripe webhook API key is not configured");
+    return NextResponse.json({ error: "Webhook processing is not configured." }, { status: 503 });
+  }
+
   let event: Stripe.Event;
   try {
     event = stripe.webhooks.constructEvent(await request.text(), signature, webhookSecret);
@@ -30,6 +38,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid webhook signature." }, { status: 400 });
   }
   if (!HANDLED_EVENTS.has(event.type)) return NextResponse.json({ received: true });
+
+  let supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  try {
+    supabaseAdmin = getSupabaseAdmin();
+  } catch {
+    console.error("Stripe webhook database configuration is missing");
+    return NextResponse.json({ error: "Webhook processing is not configured." }, { status: 503 });
+  }
 
   let ownedClaimAt: string | null = null;
   try {
@@ -69,7 +85,7 @@ export async function POST(request: Request) {
     }
 
     // Always sync the latest Stripe state; event delivery order can differ from update order.
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    const subscription = await getStripeClient().subscriptions.retrieve(subscriptionId);
     const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
     const metadataUserId = subscription.metadata.supabaseUserId || null;
     const [customerMapping, subscriptionMapping] = await Promise.all([
@@ -94,7 +110,7 @@ export async function POST(request: Request) {
       .maybeSingle();
     if (userSubscriptionError) throw userSubscriptionError;
     if (processedEvent && userSubscription?.stripe_subscription_id === subscription.id) {
-      const recordedAt = new Date(processedEvent.processed_at).getTime();
+      const recordedAt = processedEvent.processed_at ? Date.parse(processedEvent.processed_at) : NaN;
       const subscriptionSyncedAt = new Date(userSubscription.updated_at).getTime();
       // A successful prior delivery writes the subscription first, then stores
       // the same timestamp in the ledger. Older pre-repair claims whose write
@@ -105,7 +121,7 @@ export async function POST(request: Request) {
     }
     const now = Date.now();
     if (processedEvent) {
-      const claimAge = now - new Date(processedEvent.processed_at).getTime();
+      const claimAge = processedEvent.processed_at ? now - Date.parse(processedEvent.processed_at) : Number.POSITIVE_INFINITY;
       if (Number.isFinite(claimAge) && claimAge < 30_000) {
         return NextResponse.json({ error: "Webhook event processing is already in progress." }, { status: 503 });
       }
@@ -129,6 +145,24 @@ export async function POST(request: Request) {
       const priorPeriodEnded = !userSubscription.current_period_end || new Date(userSubscription.current_period_end).getTime() <= Date.now();
       const priorSubscriptionIsTerminal = ["canceled", "incomplete_expired", "unpaid"].includes(userSubscription.status ?? "");
       if (!priorPeriodEnded || !priorSubscriptionIsTerminal) throw new Error("user_has_another_subscription");
+    }
+
+    // Account deletion can race a delayed Stripe delivery. Keep the webhook
+    // ledger idempotent, but never recreate a deleted user's subscription row.
+    const { data: authUser, error: authUserError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    if (authUserError && authUserError.status !== 404) throw authUserError;
+    if (authUserError?.status === 404 || !authUser.user) {
+      const ignoredAt = new Date().toISOString();
+      const { data: ignoredEvent, error: ignoreError } = await supabaseAdmin.from("stripe_webhook_events")
+        .update({ event_type: event.type, processed_at: ignoredAt })
+        .eq("id", event.id)
+        .eq("processed_at", ownedClaimAt)
+        .select("id")
+        .maybeSingle();
+      if (ignoreError) throw ignoreError;
+      if (!ignoredEvent) throw new Error("webhook_claim_lost");
+      ownedClaimAt = null;
+      return NextResponse.json({ received: true, ignored: "account_deleted" });
     }
 
     const item = subscription.items.data[0];

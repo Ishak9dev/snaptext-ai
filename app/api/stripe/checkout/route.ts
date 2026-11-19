@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { stripe } from "@/lib/stripe";
+import { getStripeClient } from "@/lib/stripe";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { APP_URL } from "@/lib/seo";
+import { isPaidCheckoutEnabled } from "@/lib/stripe-gates";
 import {
   getStripePlanPrice,
   StripePlanConfigurationError,
@@ -12,6 +14,10 @@ export async function POST(request: Request) {
   let plan: SubscriptionPlan = "monthly";
   let locale: "en" | "fr" = "en";
   try {
+    if (!request.headers.get("origin") || request.headers.get("origin") !== new URL(request.url).origin) {
+      return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+    }
+
     const supabase = await createClient();
     const {
       data: { user },
@@ -20,6 +26,13 @@ export async function POST(request: Request) {
 
     if (authError || !user) {
       return NextResponse.json({ error: "You must be logged in." }, { status: 401 });
+    }
+
+    if (!isPaidCheckoutEnabled()) {
+      return NextResponse.json(
+        { error: "Stripe checkout is not configured for this deployment.", code: "STRIPE_CONFIGURATION_INVALID" },
+        { status: 503 }
+      );
     }
 
     // No body continues to mean the existing monthly plan for older callers.
@@ -48,7 +61,7 @@ export async function POST(request: Request) {
 
     const { data: existingSubscription, error: customerLookupError } = await supabase
       .from("subscriptions")
-      .select("stripe_customer_id, stripe_subscription_id, status")
+      .select("stripe_customer_id, stripe_subscription_id, status, price_id, current_period_end, cancel_at_period_end, created_at")
       .eq("user_id", user.id)
       .maybeSingle();
     if (customerLookupError) throw customerLookupError;
@@ -64,40 +77,57 @@ export async function POST(request: Request) {
       );
     }
 
-    // Reuse an unfinished checkout for this user instead of opening another
-    // subscription flow, including requests made from a second browser tab.
-    const sessionLookup = existingSubscription?.stripe_customer_id
-      ? { customer: existingSubscription.stripe_customer_id }
-      : user.email
-        ? { customer_details: { email: user.email } }
-        : null;
-    if (sessionLookup) {
-      const openSessions = await stripe.checkout.sessions.list({
-        ...sessionLookup,
-        status: "open",
-        limit: 100,
-      });
-      const pendingSession = openSessions.data.find(
-        (session) => session.client_reference_id === user.id
-      );
-      if (pendingSession) {
-        if (pendingSession.metadata?.planType === plan && pendingSession.url) {
-          return NextResponse.json({ url: pendingSession.url });
-        }
-        return NextResponse.json(
-          { error: "A checkout is already in progress. Finish or cancel it before selecting another plan.", code: "CHECKOUT_IN_PROGRESS" },
-          { status: 409 }
-        );
+    const price = await getStripePlanPrice(plan);
+    const stripe = getStripeClient();
+    const admin = getSupabaseAdmin();
+    let customerId = existingSubscription?.stripe_customer_id ?? null;
+
+    // Catch unfinished sessions created by the older customer_email flow
+    // before making a new Customer for this account.
+    const openSessions = customerId
+      ? await stripe.checkout.sessions.list({ customer: customerId, status: "open", limit: 100 })
+      : await stripe.checkout.sessions.list({ status: "open", limit: 100 });
+    const pendingSession = openSessions.data.find(
+      (session) => session.client_reference_id === user.id
+    );
+    if (pendingSession) {
+      if (pendingSession.metadata?.planType === plan && pendingSession.url) {
+        return NextResponse.json({ url: pendingSession.url });
       }
+      return NextResponse.json(
+        { error: "A checkout is already in progress. Finish or cancel it before selecting another plan.", code: "CHECKOUT_IN_PROGRESS" },
+        { status: 409 }
+      );
     }
 
-    const price = await getStripePlanPrice(plan);
+    // Create one Stripe Customer per authenticated Supabase user. The stable
+    // idempotency key makes parallel requests reuse the same customer.
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email ?? undefined,
+        metadata: { supabaseUserId: user.id },
+      }, { idempotencyKey: `snaptext-ai-customer-${user.id}` });
+      customerId = customer.id;
+
+      const now = new Date().toISOString();
+      const { error: saveCustomerError } = await admin.from("subscriptions").upsert({
+        user_id: user.id,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: existingSubscription?.stripe_subscription_id ?? null,
+        status: existingSubscription?.status ?? "incomplete",
+        price_id: existingSubscription?.price_id ?? null,
+        current_period_end: existingSubscription?.current_period_end ?? null,
+        cancel_at_period_end: existingSubscription?.cancel_at_period_end ?? false,
+        created_at: existingSubscription?.created_at ?? now,
+        updated_at: now,
+      }, { onConflict: "user_id" });
+      if (saveCustomerError) throw saveCustomerError;
+    }
+
     const session = await stripe.checkout.sessions.create(
       {
         mode: "subscription",
-        ...(existingSubscription?.stripe_customer_id
-          ? { customer: existingSubscription.stripe_customer_id }
-          : { customer_email: user.email ?? undefined }),
+        customer: customerId,
         client_reference_id: user.id,
         metadata: { supabaseUserId: user.id, planType: plan },
         line_items: [{ price: price.id, quantity: 1 }],
@@ -121,13 +151,21 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: missingPrice && plan === "yearly"
-            ? "The selected subscription price is not configured. Add the Stripe Test Price ID to STRIPE_YEARLY_PRICE_ID."
+              ? "The selected subscription price is not configured for this Stripe mode. Set STRIPE_YEARLY_PRICE_ID to a matching recurring Price ID."
             : missingPrice
               ? "The monthly subscription price is not configured."
               : "The selected subscription price is invalid or inactive.",
           code: error.code,
         },
         { status: 503 }
+      );
+    }
+
+    const stripeError = error && typeof error === "object" ? error as { code?: unknown; type?: unknown } : null;
+    if ([stripeError?.code, stripeError?.type].some((value) => value === "idempotency_error" || value === "StripeIdempotencyError" || value === "idempotency_key_in_use")) {
+      return NextResponse.json(
+        { error: "A checkout is already in progress. Finish or cancel it before selecting another plan.", code: "CHECKOUT_IN_PROGRESS" },
+        { status: 409 }
       );
     }
 

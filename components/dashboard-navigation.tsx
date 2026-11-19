@@ -18,6 +18,7 @@ export default function DashboardNavigation() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [accountMessage, setAccountMessage] = useState("");
 
   useEffect(() => {
     const supabase = createClient();
@@ -50,6 +51,32 @@ export default function DashboardNavigation() {
     router.push(isFrench ? "/fr" : "/");
   }
 
+  async function deleteAccount() {
+    const prompt = isFrench
+      ? "Supprimer définitivement votre compte et vos résultats enregistrés ? Cette action est irréversible. Un abonnement doit d’abord être résilié et confirmé comme annulé par Stripe."
+      : "Permanently delete your account and saved results? This cannot be undone. Any subscription must first be canceled and confirmed canceled by Stripe.";
+    if (busy || !window.confirm(prompt)) return;
+    setBusy(true);
+    setAccountMessage("");
+    try {
+      const response = await fetch("/api/privacy/account", { method: "DELETE" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Account deletion failed.");
+      try {
+        await createClient().auth.signOut({ scope: "local" });
+      } catch {
+        // Auth.admin.deleteUser already invalidated the account; navigation
+        // should complete even if the local browser session cannot be cleared.
+      }
+      router.replace(isFrench ? "/fr" : "/");
+      router.refresh();
+    } catch (error) {
+      setAccountMessage(error instanceof Error ? error.message : "Account deletion failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
     <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
       <Link href={dashboardPath} className="flex items-center gap-2.5">
@@ -69,6 +96,10 @@ export default function DashboardNavigation() {
           {menuOpen && <div className="absolute right-0 top-full z-50 mt-2 w-60 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
             <div className="border-b border-slate-100 px-3 py-3"><p className="truncate text-sm font-semibold text-slate-900">{displayName}</p><p className="truncate text-xs text-slate-500">{user?.email}</p></div>
             <button type="button" onClick={manageSubscription} disabled={busy} className="mt-2 block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-violet-50 hover:text-violet-700 disabled:opacity-50">{isFrench ? "Gérer l’abonnement" : "Manage subscription"}</button>
+            <Link href={`${dashboardPath}/account`} onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-violet-50 hover:text-violet-700">{isFrench ? "Paramètres du compte" : "Account settings"}</Link>
+            <a href="/api/privacy/export" className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-violet-50 hover:text-violet-700">{isFrench ? "Télécharger mes données" : "Download my data"}</a>
+            {accountMessage && <p role="alert" className="px-3 py-2 text-xs text-rose-700">{accountMessage}</p>}
+            <button type="button" onClick={deleteAccount} disabled={busy} className="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-50">{isFrench ? "Supprimer mon compte" : "Delete account"}</button>
             <button type="button" onClick={signOut} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-600 hover:bg-rose-50"><LogOut size={16} />{isFrench ? "Déconnexion" : "Sign out"}</button>
           </div>}
         </div>
@@ -81,6 +112,10 @@ export default function DashboardNavigation() {
       <Link onClick={() => setMobileOpen(false)} href={languagePath} className="flex items-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold text-violet-700"><Languages size={16} />{isFrench ? "Switch to English" : "Passer en français"}</Link>
       <div className="mt-2 border-t border-slate-100 px-3 pt-4"><p className="truncate text-sm font-semibold text-slate-900">{displayName}</p><p className="truncate text-xs text-slate-500">{user?.email}</p>
         <button type="button" onClick={manageSubscription} disabled={busy} className="mt-3 block w-full py-2 text-left text-sm font-medium text-slate-700">{isFrench ? "Gérer l’abonnement" : "Manage subscription"}</button>
+        <Link onClick={() => setMobileOpen(false)} href={`${dashboardPath}/account`} className="block py-2 text-sm font-medium text-slate-700">{isFrench ? "Paramètres du compte" : "Account settings"}</Link>
+        <a href="/api/privacy/export" className="block py-2 text-sm font-medium text-slate-700">{isFrench ? "Télécharger mes données" : "Download my data"}</a>
+        {accountMessage && <p role="alert" className="py-2 text-xs text-rose-700">{accountMessage}</p>}
+        <button type="button" onClick={deleteAccount} disabled={busy} className="block w-full py-2 text-left text-sm font-medium text-rose-700 disabled:opacity-50">{isFrench ? "Supprimer mon compte" : "Delete account"}</button>
         <button type="button" onClick={signOut} className="flex w-full items-center gap-2 py-2 text-left text-sm font-medium text-rose-600"><LogOut size={16} />{isFrench ? "Déconnexion" : "Sign out"}</button>
       </div>
     </nav>}

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { APP_URL, SITE_DESCRIPTION, SITE_NAME, absoluteUrl } from "@/lib/seo";
 import { CookieConsent } from "@/components/cookie-consent";
+import { AnalyticsRuntime } from "@/components/analytics-runtime";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([organizationSchema, websiteSchema]).replace(/</g, "\\u003c") }} />
         {children}
         <CookieConsent />
+        <AnalyticsRuntime />
       </body>
     </html>
   );

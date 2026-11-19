@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const FREE_TOOL_USES = 2;
 export const TOOL_IDS = [
@@ -10,7 +10,7 @@ export const TOOL_IDS = [
 export type ToolId = (typeof TOOL_IDS)[number];
 
 export async function reserveToolUsage(userId: string, toolId: ToolId) {
-  const { data, error } = await supabaseAdmin.rpc("reserve_tool_usage", {
+  const { data, error } = await getSupabaseAdmin().rpc("reserve_tool_usage", {
     p_user_id: userId,
     p_tool_id: toolId,
   });
@@ -38,7 +38,7 @@ export async function reserveToolUsage(userId: string, toolId: ToolId) {
 }
 
 export async function completeToolUsage(reservationId: string) {
-  const { error } = await supabaseAdmin.rpc("complete_tool_usage", {
+  const { error } = await getSupabaseAdmin().rpc("complete_tool_usage", {
     p_reservation_id: reservationId,
   });
   if (error) {
@@ -48,7 +48,7 @@ export async function completeToolUsage(reservationId: string) {
 }
 
 export async function releaseToolUsage(reservationId: string) {
-  const { error } = await supabaseAdmin.rpc("release_tool_usage", {
+  const { error } = await getSupabaseAdmin().rpc("release_tool_usage", {
     p_reservation_id: reservationId,
   });
   if (error) {

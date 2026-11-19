@@ -1,10 +1,14 @@
-
 import Stripe from "stripe";
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error("Missing STRIPE_SECRET_KEY");
-}
+let stripeClient: Stripe | null = null;
 
-export const stripe = new Stripe(
-  process.env.STRIPE_SECRET_KEY
-);
+/** Create Stripe only when a request needs it, so builds do not require secrets. */
+export function getStripeClient() {
+  if (stripeClient) return stripeClient;
+
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) throw new Error("Missing STRIPE_SECRET_KEY");
+
+  stripeClient = new Stripe(secretKey);
+  return stripeClient;
+}

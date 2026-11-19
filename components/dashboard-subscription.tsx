@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ArrowUpRight, CalendarDays, LoaderCircle } from "lucide-react";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 type PlanPrice = { id: string; amountCents: number; currency: string; interval: "month" | "year" };
 type State = { status: string; priceId: string | null; currentPeriodEnd: string | null; cancelAtPeriodEnd: boolean; isPremium: boolean; totalUsed: number; totalLimit: number };
@@ -17,7 +18,7 @@ export default function DashboardSubscription({ language, checkout }: { language
     try {
       const response = await fetch("/api/stripe/status", { cache: "no-store" });
       if (response.ok) setState(await response.json());
-    } catch { /* Keep the existing dashboard visible when billing is temporarily unavailable. */ }
+    } catch { /* Keep the dashboard visible when the billing status request fails. */ }
   }, []);
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export default function DashboardSubscription({ language, checkout }: { language
       const response = await fetch("/api/stripe/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan, locale: language }) });
       const result = await response.json();
       if (!response.ok || !result.url) throw new Error(result.error || (fr ? "Impossible de démarrer le paiement." : "Unable to start checkout."));
+      trackAnalyticsEvent({ event: "begin_checkout", plan_id: plan, billing_interval: plan === "monthly" ? "month" : "year", currency: "EUR" });
       window.location.assign(result.url);
     } catch (cause) { setMessage(cause instanceof Error ? cause.message : (fr ? "Une erreur est survenue." : "Something went wrong.")); setBusy(false); }
   }

@@ -28,7 +28,7 @@ const commonFaqs = (toolName: string, action: string) => [
   },
   {
     question: `Can I try ${toolName.toLowerCase()} for free?`,
-    answer: `Yes. A free SnapText AI account includes two lifetime uses of each of the ten tools. You can try ${action} without entering payment details. For additional processing, the Pro plan costs €4.99 per month and provides unlimited access to all available tools.`,
+    answer: `Yes. A free SnapText AI account includes two lifetime uses of each of the ten tools. You can try ${action} without entering payment details. Current paid plan prices and billing periods are shown on the pricing section and confirmed in Stripe Checkout before payment. Subscriptions renew at the displayed interval until canceled.`,
   },
   {
     question: `Which file formats does this tool support?`,
@@ -215,19 +215,6 @@ export default async function EnglishToolLandingPage({
       price: "0",
       priceCurrency: "EUR",
       description: "Two lifetime uses per tool.",
-    },
-    {
-      "@type": "Offer",
-      name: "Pro",
-      price: "4.99",
-      priceCurrency: "EUR",
-      description: "Unlimited use of all ten tools.",
-      priceSpecification: {
-        "@type": "UnitPriceSpecification",
-        price: "4.99",
-        priceCurrency: "EUR",
-        unitCode: "MON",
-      },
     },
   ];
 

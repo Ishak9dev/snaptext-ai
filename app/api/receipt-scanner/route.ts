@@ -13,6 +13,13 @@ const BUCKET = "document-analyzer";
 const VISION_MODEL = "@cf/moondream/moondream3.1-9B-A2B";
 const TEXT_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+type UnknownRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): UnknownRecord | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as UnknownRecord
+    : null;
+}
 const MAX_PDF_PAGES = 20;
 const MAX_TEXT_LENGTH = 40000;
 
@@ -97,7 +104,7 @@ async function callMoondream(
     }
   );
 
-  const payload = (await response.json()) as Record<string, any>;
+  const payload = (await response.json()) as UnknownRecord;
 
   if (!response.ok || !payload.success) {
     console.error("Receipt OCR failed:", {
@@ -107,10 +114,9 @@ async function callMoondream(
     throw new Error("RECEIPT_OCR_FAILED");
   }
 
-  const result =
-    payload.result?.result?.answer ??
-    payload.result?.answer ??
-    payload.result?.response;
+  const resultPayload = asRecord(payload.result);
+  const nestedResult = asRecord(resultPayload?.result);
+  const result = nestedResult?.answer ?? resultPayload?.answer ?? resultPayload?.response;
 
   return typeof result === "string" ? result.trim() : "";
 }
@@ -205,7 +211,7 @@ ${receiptText.slice(0, MAX_TEXT_LENGTH)}`,
     }
   );
 
-  const payload = (await response.json()) as Record<string, any>;
+  const payload = (await response.json()) as UnknownRecord;
 
   if (!response.ok || !payload.success) {
     console.error("Receipt extraction model failed:", {
@@ -215,11 +221,8 @@ ${receiptText.slice(0, MAX_TEXT_LENGTH)}`,
     throw new Error("RECEIPT_EXTRACTION_FAILED");
   }
 
-  const raw =
-    payload.result?.response ??
-    payload.result?.output ??
-    payload.response ??
-    payload.result;
+  const resultPayload = asRecord(payload.result);
+  const raw = resultPayload?.response ?? resultPayload?.output ?? payload.response ?? payload.result;
 
   let parsed: unknown;
 
@@ -244,10 +247,7 @@ ${receiptText.slice(0, MAX_TEXT_LENGTH)}`,
   } else {
     console.error("Unexpected receipt model response:", {
       topLevelKeys: Object.keys(payload),
-      resultKeys:
-        payload.result && typeof payload.result === "object"
-          ? Object.keys(payload.result)
-          : [],
+      resultKeys: resultPayload ? Object.keys(resultPayload) : [],
     });
     throw new Error("INVALID_AI_RESPONSE");
   }

@@ -1,6 +1,7 @@
 import "server-only";
 
-import { stripe } from "@/lib/stripe";
+import { getStripeClient } from "@/lib/stripe";
+import { getStripeMode, isStripeModeAllowedForEnvironment } from "@/lib/stripe-gates";
 
 export type SubscriptionPlan = "monthly" | "yearly";
 
@@ -20,23 +21,30 @@ export async function getStripePlanPrice(plan: SubscriptionPlan) {
     throw new StripePlanConfigurationError("PRICE_NOT_CONFIGURED");
   }
 
+  const stripeMode = getStripeMode();
+  if (!isStripeModeAllowedForEnvironment(stripeMode)) {
+    throw new StripePlanConfigurationError("PRICE_INVALID");
+  }
+
   let price;
   try {
-    price = await stripe.prices.retrieve(priceId);
+    price = await getStripeClient().prices.retrieve(priceId);
   } catch {
     throw new StripePlanConfigurationError("PRICE_INVALID");
   }
 
-  const keyIsLive = /^(?:sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY ?? "");
   const expectedInterval = plan === "yearly" ? "year" : "month";
   const valid = price.active
     && price.type === "recurring"
     && price.currency === "eur"
     && price.recurring?.interval === expectedInterval
+    && price.recurring.interval_count === 1
     && typeof price.unit_amount === "number"
-    && price.livemode === keyIsLive
+    && price.unit_amount > 0
+    && stripeMode !== null
+    && price.livemode === (stripeMode === "live")
     && (plan !== "yearly" || price.unit_amount === 2999)
-    && (process.env.NODE_ENV === "production" || !price.livemode);
+    && isStripeModeAllowedForEnvironment(stripeMode);
 
   if (!valid) {
     throw new StripePlanConfigurationError("PRICE_INVALID");

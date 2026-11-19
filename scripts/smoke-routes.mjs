@@ -13,6 +13,7 @@ const slugs = [
   "image-to-pdf",
   "metadata-remover",
 ];
+const legalSlugs = ["privacy", "terms", "sale-terms", "legal-notice", "cookies", "refunds", "contact"];
 
 async function readRoute(path, manualRedirect = false) {
   const response = await fetch(new URL(path, `${baseUrl}/`), {
@@ -24,6 +25,7 @@ async function readRoute(path, manualRedirect = false) {
 const publicPaths = [
   "/",
   "/fr",
+  ...legalSlugs.flatMap((slug) => [`/legal/${slug}`, `/fr/legal/${slug}`]),
   ...slugs.flatMap((slug) => [`/tools/${slug}`, `/fr/outils/${slug}`]),
 ];
 
@@ -49,16 +51,19 @@ assert.ok(
   frenchHome.body.includes("<title>Outils IA pour images et documents | SnapText AI</title>"),
   "French homepage title should include the brand suffix once"
 );
-assert.ok(frenchHome.body.includes("4,99 €"), "French pricing should use French currency formatting");
+assert.ok(frenchHome.body.includes("Pro mensuel"), "French pricing should include the monthly plan");
+assert.ok(frenchHome.body.includes("Conditions de vente"), "French pricing should link to sale terms");
+assert.ok(!frenchHome.body.includes("4,99 €"), "Pricing schema should not publish a stale hardcoded price");
 
 const englishPricing = await readRoute("/");
-for (const label of ["Pro Monthly", "€4.99", "SnapText AI Pro Yearly", "€29.99", "Billed annually"]) {
+for (const label of ["Pro Monthly", "SnapText AI Pro Yearly", "Terms of Sale", "Cancellation and refunds"]) {
   assert.ok(englishPricing.body.includes(label), `English pricing should include ${label}`);
 }
 const frenchPricing = await readRoute("/fr");
-for (const label of ["Pro mensuel", "SnapText AI Pro annuel", "Facturation annuelle"]) {
+for (const label of ["Pro mensuel", "SnapText AI Pro annuel", "Conditions de vente", "Résiliation et remboursements"]) {
   assert.ok(frenchPricing.body.includes(label), `French pricing should include ${label}`);
 }
+assert.ok(!englishPricing.body.includes("operating authorization is verified"), "Pricing should not contain obsolete legal gating");
 assert.ok(
   englishPricing.body.includes("md:grid-cols-2 lg:grid-cols-3"),
   "Pricing cards should use the responsive desktop and tablet grid"
@@ -69,6 +74,10 @@ assert.equal(sitemap.response.status, 200, "Sitemap should be available");
 for (const slug of slugs) {
   assert.ok(sitemap.body.includes(`/tools/${slug}`), `Sitemap should include /tools/${slug}`);
   assert.ok(sitemap.body.includes(`/fr/outils/${slug}`), `Sitemap should include /fr/outils/${slug}`);
+}
+for (const slug of legalSlugs) {
+  assert.ok(sitemap.body.includes(`/legal/${slug}`), `Sitemap should include /legal/${slug}`);
+  assert.ok(sitemap.body.includes(`/fr/legal/${slug}`), `Sitemap should include /fr/legal/${slug}`);
 }
 
 const protectedPaths = [

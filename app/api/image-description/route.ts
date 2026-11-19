@@ -14,6 +14,13 @@ type SupportedImageType =
   | "image/webp";
 
 type DescriptionMode = "short" | "detailed";
+type UnknownRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): UnknownRecord | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as UnknownRecord
+    : null;
+}
 
 function detectImageType(bytes: Uint8Array): SupportedImageType | null {
   if (
@@ -56,14 +63,17 @@ function detectImageType(bytes: Uint8Array): SupportedImageType | null {
   return null;
 }
 
-function extractDescription(payload: Record<string, any>): string {
+function extractDescription(payload: unknown): string {
+  const root = asRecord(payload);
+  const result = asRecord(root?.result);
+  const nested = asRecord(result?.result);
   const candidates = [
-    payload.result?.result?.answer,
-    payload.result?.answer,
-    payload.result?.description,
-    payload.result?.response,
-    payload.result?.output,
-    payload.response,
+    nested?.answer,
+    result?.answer,
+    result?.description,
+    result?.response,
+    result?.output,
+    root?.response,
   ];
 
   for (const candidate of candidates) {
@@ -211,7 +221,7 @@ export async function POST(request: Request) {
       }
     );
 
-    const payload = (await aiResponse.json()) as Record<string, any>;
+    const payload = (await aiResponse.json()) as UnknownRecord;
 
     if (!aiResponse.ok || !payload.success) {
       console.error("Cloudflare image description failed:", {
@@ -229,10 +239,7 @@ export async function POST(request: Request) {
     if (!description) {
       console.error("Unexpected Moondream response structure:", {
         topLevelKeys: Object.keys(payload),
-        resultKeys:
-          payload.result && typeof payload.result === "object"
-            ? Object.keys(payload.result)
-            : [],
+        resultKeys: asRecord(payload.result) ? Object.keys(asRecord(payload.result)!) : [],
       });
 
       return NextResponse.json(

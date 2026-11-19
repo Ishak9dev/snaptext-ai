@@ -1,12 +1,13 @@
 
 import { createClient } from "@/lib/supabase/server";
+import type { Json } from "@/lib/supabase/database.types";
 
 type SaveToolHistoryParams = {
   userId: string;
   toolType: string;
   fileName: string;
   result: unknown;
-  metadata?: Record<string, unknown>;
+  metadata?: Json;
 };
 
 export async function saveToolHistory({

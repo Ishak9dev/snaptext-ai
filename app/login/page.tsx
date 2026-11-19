@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 function getSafeNextPath() {
   const params = new URLSearchParams(window.location.search);
@@ -44,6 +45,8 @@ export default function LoginPage() {
         setError(error.message);
         return;
       }
+
+      trackAnalyticsEvent({ event: "login", method: "email" });
 
       router.replace(getSafeNextPath());
       router.refresh();

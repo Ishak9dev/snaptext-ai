@@ -59,7 +59,6 @@ const ALLOWED_TYPES = [
 
 export default function FormExtractorWorkspace() {
   const translate = useWorkspaceTranslation();
-  const supabase = createClient();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
@@ -118,8 +117,12 @@ export default function FormExtractorWorkspace() {
     setResult(null);
 
     let storagePath: string | null = null;
+    let supabase: ReturnType<typeof createClient> | null = null;
 
     try {
+      // Avoid starting Supabase Auth session initialization during the server
+      // prerender of this Client Component.
+      supabase = createClient();
       const {
         data: { user },
         error: authError,
@@ -206,7 +209,7 @@ if (historyError) {
           : translate("Something went wrong.")
       );
     } finally {
-      if (storagePath) {
+      if (storagePath && supabase) {
         await supabase.storage
           .from("document-analyzer")
           .remove([storagePath]);

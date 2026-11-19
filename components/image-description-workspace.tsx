@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { saveToolHistoryClient } from "@/lib/save-tool-history-client";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 type DescriptionMode = "short" | "detailed";
 
@@ -192,6 +193,7 @@ export default function ImageDescriptionWorkspace() {
       }
 
       setDescription(result.description);
+      trackAnalyticsEvent({ event: "generate_image_description" });
       try {
         await saveToolHistoryClient({
           toolType: "image-description",

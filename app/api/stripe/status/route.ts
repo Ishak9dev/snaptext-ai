@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET() {
   const supabase = await createClient();
@@ -8,7 +8,7 @@ export async function GET() {
   if (authError || !user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
 
   const [{ data: subscription, error }, { data: usage, error: usageError }] = await Promise.all([
-    supabaseAdmin.from("subscriptions").select("status, price_id, current_period_end, cancel_at_period_end, updated_at").eq("user_id", user.id).maybeSingle(),
+    getSupabaseAdmin().from("subscriptions").select("status, stripe_subscription_id, price_id, current_period_end, cancel_at_period_end, updated_at").eq("user_id", user.id).maybeSingle(),
     supabase.rpc("get_my_tool_usage"),
   ]);
   if (error || usageError) {
@@ -17,7 +17,7 @@ export async function GET() {
   }
   const rows = usage ?? [];
   return NextResponse.json({
-    status: subscription?.status ?? "free",
+    status: subscription?.stripe_subscription_id ? subscription.status : "free",
     priceId: subscription?.price_id ?? null,
     currentPeriodStart: null,
     currentPeriodEnd: subscription?.current_period_end ?? null,

@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { absoluteUrl } from "@/lib/seo";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 function getSafeNextPath() {
   const params = new URLSearchParams(window.location.search);
@@ -25,6 +26,7 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
 
   async function handleSignup(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -38,6 +40,10 @@ export default function SignupPage() {
     }
     if (!acceptedTerms) {
       setError("Please review and accept the Terms of Service and Privacy Policy.");
+      return;
+    }
+    if (!ageConfirmed) {
+      setError("You must confirm that you are at least 16 and meet any higher age requirement where you live.");
       return;
     }
 
@@ -63,6 +69,8 @@ export default function SignupPage() {
         setError(error.message);
         return;
       }
+
+      trackAnalyticsEvent({ event: "sign_up", method: "email" });
 
       setSuccess(
         "Account created! Please check your email to confirm your account."
@@ -181,6 +189,10 @@ export default function SignupPage() {
         <label className="mt-6 flex items-start gap-2 text-xs leading-5 text-slate-500">
           <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-1" />
           <span>By creating an account, you agree to the <Link className="text-violet-700 underline" href="/legal/terms">Terms of Service</Link> and acknowledge the <Link className="text-violet-700 underline" href="/legal/privacy">Privacy Policy</Link>.</span>
+        </label>
+        <label className="mt-3 flex items-start gap-2 text-xs leading-5 text-slate-500">
+          <input type="checkbox" checked={ageConfirmed} onChange={(event) => setAgeConfirmed(event.target.checked)} className="mt-1" />
+          <span>I confirm that I am at least 16 years old and meet any higher minimum age or parental-authorisation requirement that applies where I live.</span>
         </label>
       </div>
     </main>

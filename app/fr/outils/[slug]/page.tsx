@@ -26,7 +26,7 @@ const commonFaqs = (toolName: string, action: string) => [
   },
   {
     question: `Puis-je essayer ${toolName.toLowerCase()} gratuitement ?`,
-    answer: `Oui. Un compte SnapText AI gratuit comprend deux utilisations à vie pour chacun des dix outils. Vous pouvez essayer ${action} sans saisir vos coordonnées bancaires. Pour traiter davantage de fichiers, l’offre Pro coûte 4,99 € par mois et donne un accès illimité à tous les outils disponibles.`,
+    answer: `Oui. Un compte SnapText AI gratuit comprend deux utilisations à vie pour chacun des dix outils. Vous pouvez essayer ${action} sans saisir vos coordonnées bancaires. Les tarifs et périodes de facturation payants sont affichés dans la section des offres et confirmés dans Stripe Checkout avant le paiement. Les abonnements se renouvellent à la période indiquée jusqu’à leur résiliation.`,
   },
   {
     question: `Quels formats de fichiers cet outil accepte-t-il ?`,
@@ -157,7 +157,6 @@ export default async function FrenchToolLandingPage({ params }: { params: Promis
   const pageUrl = absoluteUrl(`/fr/outils/${slug}`);
   const offers = [
     { "@type": "Offer", name: "Gratuit", price: "0", priceCurrency: "EUR", description: "Deux utilisations à vie par outil." },
-    { "@type": "Offer", name: "Pro", price: "4.99", priceCurrency: "EUR", description: "Utilisation illimitée des dix outils.", priceSpecification: { "@type": "UnitPriceSpecification", price: "4.99", priceCurrency: "EUR", unitCode: "MON" } },
   ];
   const structuredData = [
     { "@context": "https://schema.org", "@type": "SoftwareApplication", name: tool.name, applicationCategory: "UtilitiesApplication", operatingSystem: "Web", inLanguage: "fr", description: tool.description, url: pageUrl, offers },

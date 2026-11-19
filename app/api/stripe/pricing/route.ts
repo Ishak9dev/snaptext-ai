@@ -1,7 +1,15 @@
-import { NextResponse } from "next/server";
+import { connection, NextResponse } from "next/server";
 import { getStripePlanPrice } from "@/lib/stripe-plans";
+import { isPaidCheckoutEnabled } from "@/lib/stripe-gates";
 
 export async function GET() {
+  // Stripe configuration and Price data are deployment-specific runtime data.
+  // Keep this endpoint out of the build-time prerendered output.
+  await connection();
+  const paidCheckoutEnabled = isPaidCheckoutEnabled();
+  // Prices can still be shown when a browser key or webhook secret is missing.
+  // Checkout remains fail-closed until the complete matching configuration is
+  // present, while the pricing page never hides valid Stripe prices.
   const [monthlyResult, yearlyResult] = await Promise.allSettled([
     getStripePlanPrice("monthly"),
     getStripePlanPrice("yearly"),
@@ -20,6 +28,7 @@ export async function GET() {
 
   return NextResponse.json(
     {
+      paidCheckoutEnabled,
       yearlyConfigured: Boolean(process.env.STRIPE_YEARLY_PRICE_ID),
       monthly,
       yearly,
@@ -28,6 +37,6 @@ export async function GET() {
         ? Math.round((savingsCents / annualizedMonthlyCents) * 1000) / 10
         : null,
     },
-    { headers: { "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=600" } }
+    { headers: { "Cache-Control": "private, no-store, max-age=0" } }
   );
 }

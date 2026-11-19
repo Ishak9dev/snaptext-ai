@@ -35,13 +35,14 @@ export function CookieConsent() {
 
   function save(next: Preferences) {
     localStorage.setItem(KEY, JSON.stringify(next));
+    window.dispatchEvent(new Event("snaptext:consent-changed"));
     setAnalytics(next.analytics); setAdvertising(next.advertising); setOpen(false); setCustomize(false);
   }
 
   if (!open) return null;
   const labels = fr
-    ? { title: "Vos choix de confidentialité", text: "Les stockages essentiels assurent la sécurité et les fonctions demandées. Aucun outil d’analyse ou de publicité n’est actuellement activé.", accept: "Tout accepter", reject: "Tout refuser", customize: "Personnaliser", save: "Enregistrer mes choix", essential: "Essentiels (toujours actifs)", analytics: "Statistiques", advertising: "Publicité" }
-    : { title: "Your privacy choices", text: "Essential storage supports security and requested features. No analytics or advertising tool is currently enabled.", accept: "Accept all", reject: "Reject all", customize: "Customize", save: "Save my choices", essential: "Essential (always active)", analytics: "Analytics", advertising: "Advertising" };
+    ? { title: "Vos choix de confidentialité", text: "Les stockages essentiels assurent la sécurité et les fonctions demandées. Les statistiques ne sont activées qu’après votre accord. Aucun outil publicitaire n’est utilisé.", accept: "Tout accepter", reject: "Tout refuser", customize: "Personnaliser", save: "Enregistrer mes choix", essential: "Essentiels (toujours actifs)", analytics: "Statistiques", advertising: "Publicité" }
+    : { title: "Your privacy choices", text: "Essential storage supports security and requested features. Analytics runs only if you allow it. No advertising tools are used.", accept: "Accept all", reject: "Reject all", customize: "Customize", save: "Save my choices", essential: "Essential (always active)", analytics: "Analytics", advertising: "Advertising" };
   return <div role="dialog" aria-modal="true" aria-labelledby="cookie-title" className="fixed inset-x-4 bottom-4 z-[100] mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
     <h2 id="cookie-title" className="text-lg font-bold text-slate-900">{labels.title}</h2>
     <p className="mt-2 text-sm leading-6 text-slate-600">{labels.text}</p>

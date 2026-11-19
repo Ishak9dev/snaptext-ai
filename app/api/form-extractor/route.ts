@@ -22,6 +22,14 @@ type ExtractedField = {
   confidence?: number;
 };
 
+type UnknownRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): UnknownRecord | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as UnknownRecord
+    : null;
+}
+
 function getImageType(bytes: Uint8Array): string | null {
   if (
     bytes.length >= 3 &&
@@ -53,16 +61,18 @@ function getImageType(bytes: Uint8Array): string | null {
   return null;
 }
 
-function extractText(payload: any): string {
-  const result = payload?.result;
+function extractText(payload: unknown): string {
+  const root = asRecord(payload);
+  const result = asRecord(root?.result);
+  const nested = asRecord(result?.result);
 
   const candidates = [
-    result?.result?.answer,
+    nested?.answer,
     result?.answer,
     result?.description,
     result?.response,
     result?.output,
-    payload?.response,
+    root?.response,
   ];
 
   for (const candidate of candidates) {
@@ -183,7 +193,7 @@ async function extractPdfText(bytes: Uint8Array): Promise<string> {
   return pages.join("\n\n");
 }
 
-function parseJsonResponse(value: string): any {
+function parseJsonResponse(value: string): unknown {
   const cleaned = value
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```$/, "")
@@ -203,16 +213,20 @@ function parseJsonResponse(value: string): any {
   }
 }
 
-function normalizeResult(value: any) {
-  const fields: ExtractedField[] = Array.isArray(value?.fields)
-    ? value.fields
-        .filter(
-          (field: any) =>
-            field &&
-            typeof field.label === "string" &&
-            typeof field.value === "string"
-        )
-        .map((field: any) => ({
+function normalizeResult(value: unknown) {
+  const root = asRecord(value);
+  const rawFields = root?.fields;
+  const rawTables = root?.tables;
+  const rawCheckboxes = root?.checkboxes;
+  const rawNotes = root?.notes;
+
+  const fields: ExtractedField[] = Array.isArray(rawFields)
+    ? rawFields
+        .map(asRecord)
+        .filter((field): field is UnknownRecord & { label: string; value: string } => field !== null
+          && typeof field.label === "string"
+          && typeof field.value === "string")
+        .map((field) => ({
           label: field.label.slice(0, 300),
           value: field.value.slice(0, 5000),
           type:
@@ -226,11 +240,12 @@ function normalizeResult(value: any) {
         }))
     : [];
 
-  const tables = Array.isArray(value?.tables)
-    ? value.tables
-        .filter((table: any) => table && Array.isArray(table.rows))
+  const tables = Array.isArray(rawTables)
+    ? rawTables
+        .map(asRecord)
+        .filter((table): table is UnknownRecord => table !== null && Array.isArray(table.rows))
         .slice(0, 30)
-        .map((table: any) => ({
+        .map((table) => ({
           title:
             typeof table.title === "string"
               ? table.title.slice(0, 300)
@@ -238,17 +253,18 @@ function normalizeResult(value: any) {
           headers: Array.isArray(table.headers)
             ? table.headers.slice(0, 30).map(String)
             : [],
-          rows: table.rows.slice(0, 200).map((row: any) =>
+          rows: (table.rows as unknown[]).slice(0, 200).map((row: unknown) =>
             Array.isArray(row) ? row.slice(0, 30).map(String) : []
           ),
         }))
     : [];
 
-  const checkboxes = Array.isArray(value?.checkboxes)
-    ? value.checkboxes
-        .filter((item: any) => item && typeof item.label === "string")
+  const checkboxes = Array.isArray(rawCheckboxes)
+    ? rawCheckboxes
+        .map(asRecord)
+        .filter((item): item is UnknownRecord & { label: string } => item !== null && typeof item.label === "string")
         .slice(0, 200)
-        .map((item: any) => ({
+        .map((item) => ({
           label: item.label.slice(0, 300),
           checked: item.checked === true,
         }))
@@ -256,19 +272,19 @@ function normalizeResult(value: any) {
 
   return {
     documentType:
-      typeof value?.documentType === "string"
-        ? value.documentType.slice(0, 200)
+      typeof root?.documentType === "string"
+        ? root.documentType.slice(0, 200)
         : "Unknown",
     fields,
     tables,
     checkboxes,
     summary:
-      typeof value?.summary === "string"
-        ? value.summary.slice(0, 3000)
+      typeof root?.summary === "string"
+        ? root.summary.slice(0, 3000)
         : "",
-    notes: Array.isArray(value?.notes)
-      ? value.notes
-          .filter((note: any) => typeof note === "string")
+    notes: Array.isArray(rawNotes)
+      ? rawNotes
+          .filter((note): note is string => typeof note === "string")
           .slice(0, 30)
           .map((note: string) => note.slice(0, 500))
       : [],
@@ -474,14 +490,15 @@ export async function POST(request: Request) {
         charactersProcessed: documentText.length,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Form extractor error:", error);
 
+    const errorMessage = error instanceof Error ? error.message : "";
     const message =
-      error?.message === "No readable text was detected in the image."
-        ? error.message
-        : error?.message === "PDF exceeds the 20-page limit."
-          ? error.message
+      errorMessage === "No readable text was detected in the image."
+        ? errorMessage
+        : errorMessage === "PDF exceeds the 20-page limit."
+          ? errorMessage
           : "Unable to extract form data. Please try another document.";
 
     return NextResponse.json({ error: message }, { status: 500 });

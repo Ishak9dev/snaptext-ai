@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { openCookieSettings } from "@/components/cookie-consent";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import {
   BrainCircuit,
   ReceiptText,
@@ -148,11 +149,13 @@ toolFormDesc: "Extract structured data from forms and documents.",
     billedAnnually: "Billed annually",
     yearlyRenewal: "Recurring subscription. Renews every 12 months until canceled.",
     yearlySavings: "Save {amount} ({percent}%) per year versus monthly billing.",
-    yearlyUnavailable: "Yearly checkout will be available after a Stripe Test Price ID is configured.",
+    monthlyRenewal: "Recurring subscription. Renews monthly until canceled.",
+    yearlyUnavailable: "Yearly checkout will be available after a yearly Stripe Price ID is configured for this mode.",
+    paidUnavailable: "Price unavailable",
     yearlyPriceInvalid: "The yearly price must be active, recurring, billed in EUR every 12 months, and cost €29.99.",
     subscriptionExists: "You already have a subscription. Manage it before starting another plan.",
     checkoutPending: "A checkout is already in progress. Finish or cancel it before selecting another plan.",
-    yearlySetupRequired: "The yearly Stripe Test Price is not configured yet.",
+    yearlySetupRequired: "The yearly Stripe Price is not configured for this mode yet.",
 
     freeFeature1: "2 lifetime uses per tool",
     freeFeature2: "Access to all ten tools",
@@ -181,8 +184,8 @@ toolFormDesc: "Extract structured data from forms and documents.",
     product: "Product",
     account: "Account",
     legal: "Information",
-    privacy: "Privacy policy coming soon",
-    terms: "Terms of service coming soon",
+    privacy: "Privacy policy",
+    terms: "Terms of service",
     rights: "All rights reserved.",
 
     dashboard: "Dashboard",
@@ -192,7 +195,8 @@ toolFormDesc: "Extract structured data from forms and documents.",
     uploadNote: "Create an account and start using our image tools.",
 
     pricingNote:
-      "Free: 2 lifetime uses per tool. Pro offers monthly or yearly billing with unlimited usage.",
+      "Free: 2 lifetime uses per tool. Contact support if paid plan pricing is unavailable.",
+    pricingNoteActive: "Paid subscriptions renew at the interval shown until canceled from the billing portal.",
   },
 
   fr: {
@@ -305,11 +309,13 @@ toolFormDesc: "Extrayez des données structurées à partir de formulaires et de
     billedAnnually: "Facturation annuelle",
     yearlyRenewal: "Abonnement récurrent. Renouvellement tous les 12 mois jusqu’à résiliation.",
     yearlySavings: "Économisez {amount} ({percent} %) par an par rapport au tarif mensuel.",
-    yearlyUnavailable: "Le paiement annuel sera disponible après la configuration d’un tarif Stripe de test.",
+    monthlyRenewal: "Abonnement récurrent. Renouvellement mensuel jusqu’à résiliation.",
+    yearlyUnavailable: "Le paiement annuel sera disponible après la configuration d’un tarif Stripe annuel pour ce mode.",
+    paidUnavailable: "Tarif indisponible",
     yearlyPriceInvalid: "Le tarif annuel doit être actif, récurrent, facturé en euros tous les 12 mois et coûter 29,99 €.",
     subscriptionExists: "Vous avez déjà un abonnement. Gérez-le avant d’en commencer un autre.",
     checkoutPending: "Un paiement est déjà en cours. Terminez-le ou annulez-le avant de choisir une autre offre.",
-    yearlySetupRequired: "Le tarif annuel Stripe de test n’est pas encore configuré.",
+    yearlySetupRequired: "Le tarif annuel Stripe n’est pas encore configuré pour ce mode.",
 
     freeFeature1: "2 utilisations gratuites à vie par outil",
     freeFeature2: "Accès aux dix outils",
@@ -338,8 +344,8 @@ toolFormDesc: "Extrayez des données structurées à partir de formulaires et de
     product: "Produit",
     account: "Compte",
     legal: "Informations",
-    privacy: "Politique de confidentialité bientôt disponible",
-    terms: "Conditions d'utilisation bientôt disponibles",
+    privacy: "Politique de confidentialité",
+    terms: "Conditions d’utilisation",
     rights: "Tous droits réservés.",
 
     dashboard: "Tableau de bord",
@@ -349,7 +355,8 @@ toolFormDesc: "Extrayez des données structurées à partir de formulaires et de
     uploadNote: "Créez un compte et commencez à utiliser nos outils image.",
 
     pricingNote:
-      "Gratuit : 2 utilisations gratuites à vie par outil. Pro propose une facturation mensuelle ou annuelle avec une utilisation illimitée.",
+      "Gratuit : 2 utilisations gratuites à vie par outil. Contactez l’assistance si les tarifs payants ne s’affichent pas.",
+    pricingNoteActive: "Les abonnements payants sont renouvelés selon la période affichée jusqu’à leur résiliation depuis le portail de facturation.",
   },
 };
 
@@ -386,6 +393,7 @@ type StripePriceSummary = {
   interval: "month" | "year";
 };
 type StripePricingSummary = {
+  paidCheckoutEnabled: boolean;
   yearlyConfigured: boolean;
   monthly: StripePriceSummary | null;
   yearly: StripePriceSummary | null;
@@ -401,6 +409,7 @@ export default function Home({ initialLanguage = "en" }: { initialLanguage?: Lan
   const [checkoutErrorPlan, setCheckoutErrorPlan] = useState<"monthly" | "yearly" | null>(null);
   const [stripePricing, setStripePricing] = useState<StripePricingSummary | null>(null);
   const [pricingLoaded, setPricingLoaded] = useState(false);
+  const paidPlansAvailable = pricingLoaded && stripePricing?.paidCheckoutEnabled === true;
   const t = translations[lang];
   const dashboardHref = lang === "fr" ? "/fr/dashboard" : "/dashboard";
 
@@ -547,10 +556,10 @@ export default function Home({ initialLanguage = "en" }: { initialLanguage?: Lan
     },
     {
       name: t.proMonthly,
-      price: formatEuro(stripePricing?.monthly?.amountCents ?? 499),
-      pricePeriod: t.perMonth,
+      price: stripePricing?.monthly ? formatEuro(stripePricing.monthly.amountCents) : t.paidUnavailable,
+      pricePeriod: stripePricing?.monthly ? t.perMonth : "",
       billingDescription: "",
-      renewalText: "",
+      renewalText: stripePricing?.monthly ? t.monthlyRenewal : "",
       savingsText: null,
       features: [
         t.proFeature1,
@@ -563,10 +572,10 @@ export default function Home({ initialLanguage = "en" }: { initialLanguage?: Lan
     },
     {
       name: t.proYearly,
-      price: formatEuro(stripePricing?.yearly?.amountCents ?? 2999),
-      pricePeriod: t.perYear,
-      billingDescription: t.billedAnnually,
-      renewalText: t.yearlyRenewal,
+      price: stripePricing?.yearly ? formatEuro(stripePricing.yearly.amountCents) : t.paidUnavailable,
+      pricePeriod: stripePricing?.yearly ? t.perYear : "",
+      billingDescription: stripePricing?.yearly ? t.billedAnnually : "",
+      renewalText: stripePricing?.yearly ? t.yearlyRenewal : "",
       savingsText: yearlySavingsText,
       features: [
         t.proFeature1,
@@ -659,6 +668,7 @@ useEffect(() => {
         );
       }
 
+      trackAnalyticsEvent({ event: "begin_checkout", plan_id: plan, billing_interval: plan === "monthly" ? "month" : "year", currency: "EUR" });
       window.location.assign(data.url);
     } catch (error) {
       console.error("Checkout error:", error);
@@ -1105,7 +1115,7 @@ useEffect(() => {
                   </p>
                 )}
 
-                {plan.planType === "yearly" && (
+                {plan.planType === "yearly" && paidPlansAvailable && (
                   <p className="mt-2 min-h-5 text-sm font-semibold text-emerald-700">
                     {plan.savingsText ?? (pricingLoaded && stripePricing?.yearlyConfigured === false ? t.yearlyUnavailable : "")}
                   </p>
@@ -1114,8 +1124,8 @@ useEffect(() => {
                 {plan.planType !== "free" ? (
                   <button
                     type="button"
-                    onClick={() => void handleProCheckout(plan.planType)}
-                    disabled={checkoutLoadingPlan !== null || (plan.planType === "yearly" && pricingLoaded && stripePricing?.yearlyConfigured === false)}
+                      onClick={() => void handleProCheckout(plan.planType)}
+                      disabled={!paidPlansAvailable || !stripePricing?.[plan.planType] || checkoutLoadingPlan !== null || (plan.planType === "yearly" && stripePricing?.yearlyConfigured === false)}
                     className="mt-7 block w-full rounded-xl bg-violet-600 py-3 text-center text-sm font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {checkoutLoadingPlan === plan.planType ? (
@@ -1124,7 +1134,7 @@ useEffect(() => {
                         {t.redirecting}
                       </span>
                     ) : (
-                      t.upgrade
+                        paidPlansAvailable && stripePricing?.[plan.planType] ? t.upgrade : t.paidUnavailable
                     )}
                   </button>
                 ) : (
@@ -1163,7 +1173,9 @@ useEffect(() => {
           </div>
 
           <p className="mt-6 text-center text-xs text-slate-400">
-            {t.pricingNote}
+            {paidPlansAvailable ? t.pricingNoteActive : t.pricingNote}
+            {" "}<Link href={`${lang === "fr" ? "/fr" : ""}/legal/sale-terms`} className="underline hover:text-violet-700">{lang === "fr" ? "Conditions de vente" : "Terms of Sale"}</Link>
+            {" · "}<Link href={`${lang === "fr" ? "/fr" : ""}/legal/refunds`} className="underline hover:text-violet-700">{lang === "fr" ? "Résiliation et remboursements" : "Cancellation and refunds"}</Link>
           </p>
         </div>
       </section>
@@ -1175,7 +1187,6 @@ useEffect(() => {
           description: "AI-powered image and document tools to extract text, analyze documents, scan receipts and optimize images.",
           offers: [
             { "@type": "Offer", name: "Free", price: "0", priceCurrency: "EUR", description: "Two lifetime uses per tool." },
-            { "@type": "Offer", name: "Pro", price: "4.99", priceCurrency: "EUR", description: "Unlimited use of all ten tools.", priceSpecification: { "@type": "UnitPriceSpecification", price: "4.99", priceCurrency: "EUR", unitCode: "MON" } }
           ]
         },
         {
@@ -1184,7 +1195,6 @@ useEffect(() => {
           brand: { "@type": "Brand", name: "SnapText AI" },
           offers: [
             { "@type": "Offer", name: "Free", price: "0", priceCurrency: "EUR" },
-            { "@type": "Offer", name: "Pro", price: "4.99", priceCurrency: "EUR", priceSpecification: { "@type": "UnitPriceSpecification", price: "4.99", priceCurrency: "EUR", unitCode: "MON" } }
           ]
         }
       ]).replace(/</g, "\\u003c") }} />
@@ -1201,11 +1211,11 @@ useEffect(() => {
           <div className="space-y-4">
             {(lang === "fr" ? [
               { q: "Que puis-je faire avec SnapText AI ?", a: "SnapText AI réunit dix outils en ligne pour travailler avec les images et les documents. Vous pouvez extraire du texte depuis une image, analyser des documents, scanner des reçus, retirer un arrière-plan, compresser ou convertir des images et créer des PDF. Les outils disponibles dépendent de votre espace de travail." },
-              { q: "SnapText AI propose-t-il une formule gratuite ?", a: "Oui. Le compte gratuit donne accès aux dix outils avec deux utilisations à vie par outil, sans carte bancaire. Si vous avez besoin de traitements supplémentaires, l’offre Pro coûte 4,99 € par mois et permet une utilisation illimitée des outils inclus." },
+              { q: "SnapText AI propose-t-il une formule gratuite ?", a: "Oui. Le compte gratuit donne accès aux dix outils avec deux utilisations à vie par outil, sans carte bancaire. Les tarifs et périodes des offres payantes sont affichés avant le paiement dans Stripe Checkout. Les abonnements se renouvellent jusqu’à leur résiliation." },
               { q: "Quels formats d’image sont pris en charge ?", a: "Les outils image prennent en charge les formats courants JPG, PNG et WEBP lorsque cela s’applique au traitement choisi. Les formats d’entrée et de sortie peuvent varier selon l’outil. Consultez les indications affichées dans l’espace de travail avant d’importer votre fichier." },
             ] : [
               { q: "What can I do with SnapText AI?", a: "SnapText AI brings ten online tools together for working with images and documents. You can extract text from images, analyze documents, scan receipts, remove image backgrounds, compress or convert images, and create PDFs. Available workflows depend on the tool you choose in your workspace." },
-              { q: "Does SnapText AI have a free plan?", a: "Yes. A free account provides access to all ten tools with two lifetime uses per tool and no credit card required. If you need additional processing, the Pro plan costs €4.99 per month and provides unlimited use of the included tools." },
+              { q: "Does SnapText AI have a free plan?", a: "Yes. A free account provides access to all ten tools with two lifetime uses per tool and no credit card required. Paid plan prices and billing intervals are shown before payment in Stripe Checkout. Subscriptions renew until canceled." },
               { q: "Which image formats are supported?", a: "Image workflows support common formats such as JPG, PNG and WEBP where applicable. Input and output formats can vary depending on the selected tool and its processing requirements. Check the upload guidance in the workspace before submitting a file to confirm the supported formats." },
             ]).map((faq) => (
               <article key={faq.q} className="rounded-2xl border border-slate-200 bg-white p-6">
@@ -1219,11 +1229,11 @@ useEffect(() => {
           "@context": "https://schema.org", "@type": "FAQPage",
           mainEntity: (lang === "fr" ? [
             { q: "Que puis-je faire avec SnapText AI ?", a: "SnapText AI réunit dix outils en ligne pour travailler avec les images et les documents. Vous pouvez extraire du texte depuis une image, analyser des documents, scanner des reçus, retirer un arrière-plan, compresser ou convertir des images et créer des PDF. Les outils disponibles dépendent de votre espace de travail." },
-            { q: "SnapText AI propose-t-il une formule gratuite ?", a: "Oui. Le compte gratuit donne accès aux dix outils avec deux utilisations à vie par outil, sans carte bancaire. Si vous avez besoin de traitements supplémentaires, l’offre Pro coûte 4,99 € par mois et permet une utilisation illimitée des outils inclus." },
+            { q: "SnapText AI propose-t-il une formule gratuite ?", a: "Oui. Le compte gratuit donne accès aux dix outils avec deux utilisations à vie par outil, sans carte bancaire. Les tarifs et périodes des offres payantes sont affichés avant le paiement dans Stripe Checkout. Les abonnements se renouvellent jusqu’à leur résiliation." },
             { q: "Quels formats d’image sont pris en charge ?", a: "Les outils image prennent en charge les formats courants JPG, PNG et WEBP lorsque cela s’applique au traitement choisi. Les formats d’entrée et de sortie peuvent varier selon l’outil. Consultez les indications affichées dans l’espace de travail avant d’importer votre fichier." },
           ] : [
             { q: "What can I do with SnapText AI?", a: "SnapText AI brings ten online tools together for working with images and documents. You can extract text from images, analyze documents, scan receipts, remove image backgrounds, compress or convert images, and create PDFs. Available workflows depend on the tool you choose in your workspace." },
-            { q: "Does SnapText AI have a free plan?", a: "Yes. A free account provides access to all ten tools with two lifetime uses per tool and no credit card required. If you need additional processing, the Pro plan costs €4.99 per month and provides unlimited use of the included tools." },
+            { q: "Does SnapText AI have a free plan?", a: "Yes. A free account provides access to all ten tools with two lifetime uses per tool and no credit card required. Paid plan prices and billing intervals are shown before payment in Stripe Checkout. Subscriptions renew until canceled." },
             { q: "Which image formats are supported?", a: "Image workflows support common formats such as JPG, PNG and WEBP where applicable. Input and output formats can vary depending on the selected tool and its processing requirements. Check the upload guidance in the workspace before submitting a file to confirm the supported formats." },
           ]).map((faq) => ({ "@type": "Question", name: faq.q, acceptedAnswer: { "@type": "Answer", text: faq.a } }))
         }).replace(/</g, "\\u003c") }} />

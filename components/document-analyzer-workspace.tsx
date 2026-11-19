@@ -166,7 +166,6 @@ function StringList({
 
 export default function DocumentAnalyzerWorkspace() {
   const translate = useWorkspaceTranslation();
-  const supabase = createClient();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
@@ -268,6 +267,9 @@ export default function DocumentAnalyzerWorkspace() {
     setStage(translate("Preparing your document..."));
 
     let storagePath: string | null = null;
+    // Client Components are server-rendered for the initial HTML. Create the
+    // browser Supabase client only after a user action, never during render.
+    const supabase = createClient();
 
     try {
       // 1. Verify authentication.

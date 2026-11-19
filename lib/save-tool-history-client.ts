@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/client";
+import type { Json } from "@/lib/supabase/database.types";
 
 type SaveToolHistoryClientParams = {
   toolType: string;
   fileName: string;
   result: unknown;
-  metadata?: Record<string, unknown>;
+  metadata?: Json;
 };
 
 /** Save a completed tool result to the authenticated user's shared history. */

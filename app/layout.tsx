@@ -73,11 +73,6 @@ const organizationSchema = {
   logo: absoluteUrl("/favicon.ico"),
 
   description: SITE_DESCRIPTION,
-  hasMerchantReturnPolicy: {
-    "@type": "MerchantReturnPolicy",
-    "@id": absoluteUrl("/#merchant-return-policy"),
-    merchantReturnLink: absoluteUrl("/legal/refunds"),
-  },
 };
 
 const websiteSchema = {
@@ -105,10 +100,13 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify([
-              organizationSchema,
-              websiteSchema,
-            ]).replace(/</g, "\\u003c"),
+            __html: JSON.stringify(organizationSchema).replace(/</g, "\\u003c"),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(websiteSchema).replace(/</g, "\\u003c"),
           }}
         />
 

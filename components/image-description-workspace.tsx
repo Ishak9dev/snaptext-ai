@@ -289,7 +289,7 @@ export default function ImageDescriptionWorkspace() {
                 type="button"
                 onClick={reset}
                 disabled={loading}
-                className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-red-600 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-red-600 disabled:opacity-50 dark:text-gray-300 dark:hover:text-red-300"
               >
                 <X className="h-4 w-4" />
                 
@@ -487,7 +487,7 @@ export default function ImageDescriptionWorkspace() {
             <button
               type="button"
               onClick={reset}
-              className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-violet-700 dark:hover:text-violet-300"
+              className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-violet-700 dark:text-gray-400 dark:hover:text-violet-300"
             >
               <RotateCcw className="h-4 w-4" />
               
@@ -497,7 +497,7 @@ export default function ImageDescriptionWorkspace() {
         </section>
       </div>
 
-      <p className="mt-6 text-center text-xs leading-5 text-gray-500 dark:text-gray-500">
+      <p className="mt-6 text-center text-xs leading-5 text-gray-500 dark:text-gray-400">
         
         {translate("AI-generated descriptions may occasionally miss details. Review important information before relying on it.")}
       </p>

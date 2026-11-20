@@ -582,7 +582,7 @@ function changeMode(newMode: OcrMode) {
                 {file.name}
               </p>
 
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-500">
                 {(file.size / 1024 / 1024).toFixed(2)} MB
               </p>
 
@@ -727,7 +727,7 @@ function changeMode(newMode: OcrMode) {
               {t.extracted}
             </h3>
 
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-500">
               {result.trim().split(/\s+/).filter(Boolean).length}{" "}
               {t.words}
             </span>
@@ -786,7 +786,7 @@ function changeMode(newMode: OcrMode) {
         </div>
       )}
 
-      <p className="mt-6 text-center text-xs text-slate-400">
+      <p className="mt-6 text-center text-xs text-slate-500">
         {mode === "ai" ? t.aiPrivacy : t.standardPrivacy}
       </p>
     </section>

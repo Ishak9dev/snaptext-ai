@@ -366,7 +366,7 @@ export default function ImageConverter() {
               type="button"
               onClick={removeImage}
               disabled={loading}
-              className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+              className="rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
               aria-label={translate("Remove image")}
             >
               <X size={20} />
@@ -445,7 +445,7 @@ export default function ImageConverter() {
                   className="w-full accent-violet-600"
                 />
 
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-slate-500">
                   
                   {translate("Higher quality usually means a larger file.")}
                 </p>
@@ -495,7 +495,7 @@ export default function ImageConverter() {
           <button
             type="button"
             onClick={downloadImage}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-green-700 px-5 py-3 font-semibold text-white transition hover:bg-green-800"
           >
             <Download size={18} />
             

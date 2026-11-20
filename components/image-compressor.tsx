@@ -398,7 +398,7 @@ export default function ImageCompressor() {
               type="button"
               onClick={removeImage}
               aria-label={translate("Remove image")}
-              className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
+              className="rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600"
             >
               <X size={20} />
             </button>
@@ -474,7 +474,7 @@ export default function ImageCompressor() {
                 className="w-full accent-violet-600"
               />
 
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-500">
                 
                 {translate("Lower quality usually creates smaller files.")}
               </p>
@@ -511,7 +511,7 @@ export default function ImageCompressor() {
                 className="w-full accent-violet-600"
               />
 
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-500">
                 
                 {translate("Images smaller than this width will not be enlarged.")}
               </p>
@@ -602,7 +602,7 @@ export default function ImageCompressor() {
           <button
             type="button"
             onClick={downloadImage}
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700"
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-green-700 px-5 py-3 font-semibold text-white transition hover:bg-green-800"
           >
             <Download size={18} />
             

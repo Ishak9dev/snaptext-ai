@@ -165,7 +165,7 @@ export default async function FrenchToolLandingPage({ params }: { params: Promis
       price: "0",
       priceCurrency: "EUR",
       description: "Deux utilisations à vie par outil.",
-      availability: "https://schema.org/InStock",
+      availability: "https://schema.org/OnlineOnly",
     },
     {
       "@type": "Offer",
@@ -173,7 +173,7 @@ export default async function FrenchToolLandingPage({ params }: { params: Promis
       price: "2.99",
       priceCurrency: "EUR",
       description: "Accès illimité à tous les outils SnapText AI, facturé mensuellement.",
-      availability: "https://schema.org/InStock",
+      availability: "https://schema.org/OnlineOnly",
     },
     {
       "@type": "Offer",
@@ -181,7 +181,7 @@ export default async function FrenchToolLandingPage({ params }: { params: Promis
       price: "29.99",
       priceCurrency: "EUR",
       description: "Accès illimité à tous les outils SnapText AI, facturé annuellement.",
-      availability: "https://schema.org/InStock",
+      availability: "https://schema.org/OnlineOnly",
     },
   ];
 
@@ -239,7 +239,7 @@ export default async function FrenchToolLandingPage({ params }: { params: Promis
         <h1 className="mx-auto max-w-4xl text-4xl font-bold tracking-tight sm:text-6xl">{tool.title}</h1>
         <p className="mx-auto mt-7 max-w-2xl text-lg leading-8 text-slate-300">{tool.description}</p>
         <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-          <Link href={tool.workspace} aria-label={`Ouvrir ${tool.name}`} className="rounded-xl bg-violet-500 px-7 py-3.5 font-semibold text-white hover:bg-violet-400">Utiliser cet outil</Link>
+          <Link href={tool.workspace} aria-label={`Ouvrir ${tool.name}`} className="rounded-xl bg-violet-600 px-7 py-3.5 font-semibold text-white hover:bg-violet-700">Utiliser cet outil</Link>
           <Link href="/fr#pricing" className="rounded-xl border border-white/20 px-7 py-3.5 font-semibold hover:bg-white/5">Voir les tarifs</Link>
         </div>
       </section>

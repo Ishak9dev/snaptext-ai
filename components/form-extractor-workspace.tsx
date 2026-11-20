@@ -352,7 +352,7 @@ if (historyError) {
                 {translate("or click to browse your files")}
               </p>
 
-              <p className="mt-5 text-xs text-gray-400">
+              <p className="mt-5 text-xs text-gray-600 dark:text-gray-300">
                 
                 {translate("PDF, JPG, JPEG, PNG, WEBP")}
               </p>
@@ -373,7 +373,7 @@ if (historyError) {
                     {file.name}
                   </p>
 
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     {(file.size / 1024 / 1024).toFixed(2)}  {translate("MB")}
                   </p>
                 </div>
@@ -382,7 +382,7 @@ if (historyError) {
                   type="button"
                   onClick={removeFile}
                   disabled={loading}
-                  className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-red-500 disabled:opacity-50 dark:hover:bg-gray-800"
+                  className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-red-500 disabled:opacity-50 dark:hover:bg-gray-800 dark:hover:text-red-300"
                   aria-label={translate("Remove file")}
                 >
                   <X className="h-5 w-5" />
@@ -407,7 +407,7 @@ if (historyError) {
                     
                     {translate("PDF document selected")}
                   </p>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                     
                     {translate("The document will be processed after you click Extract.")}
                   </p>
@@ -459,7 +459,7 @@ if (historyError) {
             )}
           </button>
 
-          <p className="mt-3 text-center text-xs text-gray-500">
+          <p className="mt-3 text-center text-xs text-gray-500 dark:text-gray-400">
             
             {translate("Your uploaded temporary file is deleted after processing.")}
           </p>
@@ -491,7 +491,7 @@ if (historyError) {
                 {translate("No extraction results yet")}
               </p>
 
-              <p className="mt-2 max-w-xs text-sm text-gray-500">
+              <p className="mt-2 max-w-xs text-sm text-gray-500 dark:text-gray-400">
                 
                 {translate("Upload a document and click Extract form data to see structured information here.")}
               </p>
@@ -554,7 +554,7 @@ if (historyError) {
                 </h3>
 
                 {result.fields.length === 0 ? (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     
                     {translate("No individual fields were detected.")}
                   </p>
@@ -571,7 +571,7 @@ if (historyError) {
                           </p>
 
                           {field.type && (
-                            <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-gray-800">
+                            <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">
                               {field.type}
                             </span>
                           )}
@@ -582,7 +582,7 @@ if (historyError) {
                         </p>
 
                         {field.confidence !== undefined && (
-                          <p className="mt-1 text-xs text-gray-400">
+                          <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
                             
                             {translate("Confidence:")}{" "}
                             {Math.round(field.confidence * 100)}%
@@ -601,7 +601,7 @@ if (historyError) {
                 </h3>
 
                 {result.checkboxes.length === 0 ? (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     
                     {translate("No checkboxes were detected.")}
                   </p>
@@ -615,7 +615,7 @@ if (historyError) {
                         <span
                           className={`flex h-5 w-5 items-center justify-center rounded border text-xs ${
                             item.checked
-                              ? "border-green-500 bg-green-500 text-white"
+                              ? "border-green-700 bg-green-700 text-white"
                               : "border-gray-400 text-transparent"
                           }`}
                         >
@@ -626,7 +626,7 @@ if (historyError) {
                           {item.label}
                         </span>
 
-                        <span className="ml-auto text-xs text-gray-500">
+                        <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">
                           {item.checked ? translate("Checked") : translate("Unchecked")}
                         </span>
                       </div>
@@ -642,7 +642,7 @@ if (historyError) {
                 </h3>
 
                 {result.tables.length === 0 ? (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     
                     {translate("No tables were detected.")}
                   </p>
@@ -724,7 +724,7 @@ if (historyError) {
             
             {translate("Need to analyze another document?")}
           </p>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             
             {translate("Remove the current file and upload another one.")}
           </p>

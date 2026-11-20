@@ -147,7 +147,7 @@ export default function LoginPage() {
         <div className="mt-8 text-center">
           <Link
             href="/"
-            className="text-sm text-slate-400 hover:text-violet-700"
+            className="text-sm text-slate-500 hover:text-violet-700"
           >
             ← Back to home
           </Link>

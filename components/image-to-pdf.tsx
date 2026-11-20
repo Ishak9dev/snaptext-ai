@@ -420,7 +420,7 @@ export default function ImageToPdf() {
               type="button"
               onClick={clearImages}
               disabled={loading}
-              className="text-sm font-semibold text-red-500 hover:text-red-700 disabled:opacity-50"
+              className="text-sm font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
             >
               
               {translate("Remove all")}
@@ -450,7 +450,7 @@ export default function ImageToPdf() {
                     onClick={() => removeImage(item.id)}
                     disabled={loading}
                     aria-label={`Remove ${item.file.name}`}
-                    className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                    className="shrink-0 rounded-md p-1 text-slate-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                   >
                     <X size={16} />
                   </button>
@@ -549,7 +549,7 @@ export default function ImageToPdf() {
           <button
             type="button"
             onClick={downloadPdf}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-green-700 px-5 py-3 font-semibold text-white transition hover:bg-green-800"
           >
             <Download size={18} />
             

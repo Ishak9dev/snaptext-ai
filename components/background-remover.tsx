@@ -338,7 +338,7 @@ export default function BackgroundRemover() {
                       className="max-h-72 max-w-full object-contain"
                     />
                   ) : (
-                    <div className="px-4 text-center text-slate-400">
+                    <div className="px-4 text-center text-slate-500">
                       <ImageIcon
                         size={38}
                         className="mx-auto mb-3"

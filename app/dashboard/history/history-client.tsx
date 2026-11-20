@@ -261,7 +261,7 @@ export default function HistoryPage() {
                         {translate(toolNames[item.tool_type] ?? item.tool_type)}
                       </span>
 
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-slate-500">
                         {formatDate(item.created_at)}
                       </span>
                     </div>
@@ -309,7 +309,7 @@ export default function HistoryPage() {
                     {selected.file_name}
                   </h3>
 
-                  <p className="mt-2 text-xs text-slate-400">
+                  <p className="mt-2 text-xs text-slate-500">
                     {formatDate(selected.created_at)}
                   </p>
 

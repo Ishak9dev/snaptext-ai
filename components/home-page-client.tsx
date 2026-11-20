@@ -400,7 +400,13 @@ type StripePricingSummary = {
   savingsCents: number | null;
   savingsPercent: number | null;
 };
-export default function Home({ initialLanguage = "en" }: { initialLanguage?: Language }) {
+export default function Home({
+  initialLanguage = "en",
+  canonicalUrl,
+}: {
+  initialLanguage?: Language;
+  canonicalUrl: string;
+}) {
   const router = useRouter();
   const [lang] = useState<Language>(initialLanguage);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -678,6 +684,46 @@ useEffect(() => {
     }
   }
 
+  const softwareApplicationSchema = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "@id": `${new URL(canonicalUrl).origin}/#softwareapplication`,
+    name: "SnapText AI",
+    applicationCategory: "UtilitiesApplication",
+    operatingSystem: "Web",
+    inLanguage: lang,
+    description: lang === "fr"
+      ? "Des outils IA en ligne pour extraire du texte, analyser des documents, scanner des reçus et optimiser des images."
+      : "AI-powered online tools to extract text, analyze documents, scan receipts and optimize images.",
+    url: canonicalUrl,
+    offers: [
+      {
+        "@type": "Offer",
+        name: lang === "fr" ? "Gratuit" : "Free",
+        price: "0",
+        priceCurrency: "EUR",
+        description: lang === "fr" ? "Deux utilisations à vie par outil." : "Two lifetime uses per tool.",
+        availability: "https://schema.org/OnlineOnly",
+      },
+      {
+        "@type": "Offer",
+        name: lang === "fr" ? "Pro mensuel" : "Pro Monthly",
+        price: "2.99",
+        priceCurrency: "EUR",
+        description: lang === "fr" ? "Accès illimité aux outils SnapText AI, facturé mensuellement." : "Unlimited access to SnapText AI tools, billed monthly.",
+        availability: "https://schema.org/OnlineOnly",
+      },
+      {
+        "@type": "Offer",
+        name: lang === "fr" ? "Pro annuel" : "Pro Yearly",
+        price: "29.99",
+        priceCurrency: "EUR",
+        description: lang === "fr" ? "Accès illimité aux outils SnapText AI, facturé annuellement." : "Unlimited access to SnapText AI tools, billed yearly.",
+        availability: "https://schema.org/OnlineOnly",
+      },
+    ],
+  };
+
   return (
     <main className="min-h-screen bg-white text-slate-900">
       {/* NAVIGATION */}
@@ -857,7 +903,7 @@ useEffect(() => {
                 {t.uploadHint}
               </p>
 
-              <p className="mt-3 text-xs text-slate-400">
+              <p className="mt-3 text-xs text-slate-500">
                 {t.formats}
               </p>
 
@@ -871,7 +917,7 @@ useEffect(() => {
   <ArrowRight size={17} />
 </Link>
 
-              <p className="mt-4 text-xs text-slate-400">
+              <p className="mt-4 text-xs text-slate-500">
                 {t.uploadNote}
               </p>
             </div>
@@ -922,7 +968,7 @@ useEffect(() => {
               {t.available}
             </span>
           ) : (
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
               {t.comingSoon}
             </span>
           )}
@@ -945,7 +991,7 @@ useEffect(() => {
             <ArrowRight size={16} />
           </Link>
         ) : (
-          <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-400">
+          <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-500">
             {t.comingSoon}
           </span>
         )}
@@ -1172,7 +1218,7 @@ useEffect(() => {
             ))}
           </div>
 
-          <p className="mt-6 text-center text-xs text-slate-400">
+          <p className="mt-6 text-center text-xs text-slate-500">
             {paidPlansAvailable ? t.pricingNoteActive : t.pricingNote}
             {" "}<Link href={`${lang === "fr" ? "/fr" : ""}/legal/sale-terms`} className="underline hover:text-violet-700">{lang === "fr" ? "Conditions de vente" : "Terms of Sale"}</Link>
             {" · "}<Link href={`${lang === "fr" ? "/fr" : ""}/legal/refunds`} className="underline hover:text-violet-700">{lang === "fr" ? "Résiliation et remboursements" : "Cancellation and refunds"}</Link>
@@ -1180,24 +1226,12 @@ useEffect(() => {
         </div>
       </section>
 
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([
-        {
-          "@context": "https://schema.org", "@type": "SoftwareApplication",
-          name: "SnapText AI", applicationCategory: "UtilitiesApplication", operatingSystem: "Web",
-          description: "AI-powered image and document tools to extract text, analyze documents, scan receipts and optimize images.",
-          offers: [
-            { "@type": "Offer", name: "Free", price: "0", priceCurrency: "EUR", description: "Two lifetime uses per tool." },
-          ]
-        },
-        {
-          "@context": "https://schema.org", "@type": "Product", name: "SnapText AI",
-          description: "An online collection of AI image and document processing tools.",
-          brand: { "@type": "Brand", name: "SnapText AI" },
-          offers: [
-            { "@type": "Offer", name: "Free", price: "0", priceCurrency: "EUR" },
-          ]
-        }
-      ]).replace(/</g, "\\u003c") }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(softwareApplicationSchema).replace(/</g, "\\u003c"),
+        }}
+      />
 
       {/* FAQ — visible content and matching structured data */}
       <section id="faq" className="bg-slate-50 px-5 py-24">
@@ -1360,7 +1394,7 @@ useEffect(() => {
           </div>
         </div>
 
-        <div className="mx-auto mt-10 max-w-7xl border-t border-slate-100 pt-7 text-center text-xs text-slate-400">
+        <div className="mx-auto mt-10 max-w-7xl border-t border-slate-100 pt-7 text-center text-xs text-slate-500">
           © 2026 SnapText AI. {t.rights}
         </div>
       </footer>

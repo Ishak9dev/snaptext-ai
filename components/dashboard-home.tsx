@@ -41,7 +41,7 @@ export default function DashboardHome({ language = "en", checkout }: { language?
                 </span>
                 <span className="mt-4 flex items-center justify-between gap-3 font-semibold text-slate-900">
                   {title}
-                  <ArrowRight size={17} className="shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-violet-700" aria-hidden="true" />
+                  <ArrowRight size={17} className="shrink-0 text-slate-500 transition group-hover:translate-x-0.5 group-hover:text-violet-700" aria-hidden="true" />
                 </span>
                 <span className="mt-1 text-sm leading-6 text-slate-600">{description}</span>
               </Link>

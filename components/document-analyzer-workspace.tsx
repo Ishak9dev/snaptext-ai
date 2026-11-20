@@ -125,7 +125,7 @@ function Section({ title, icon, children }: SectionProps) {
 
 function EmptyMessage({ children }: { children: ReactNode }) {
   return (
-    <p className="text-sm text-slate-400">{children}</p>
+    <p className="text-sm text-slate-500">{children}</p>
   );
 }
 
@@ -599,7 +599,7 @@ export default function DocumentAnalyzerWorkspace() {
                 {translate("Choose document")}
               </button>
 
-              <p className="mt-5 text-xs leading-6 text-slate-400">
+              <p className="mt-5 text-xs leading-6 text-slate-500">
                 
                 {translate("PDF, JPG, JPEG, PNG or WEBP")}
                 <br />
@@ -630,7 +630,7 @@ export default function DocumentAnalyzerWorkspace() {
                   disabled={loading}
                   onClick={resetWorkspace}
                   aria-label={translate("Remove document")}
-                  className="rounded-lg p-2 text-slate-400 transition hover:bg-white hover:text-red-500 disabled:opacity-50"
+                  className="rounded-lg p-2 text-slate-500 transition hover:bg-white hover:text-red-500 disabled:opacity-50"
                 >
                   <X size={20} />
                 </button>
@@ -699,7 +699,7 @@ export default function DocumentAnalyzerWorkspace() {
               {stage || translate("Please wait while we process your document.")}
             </p>
 
-            <p className="mt-2 text-xs text-slate-400">
+            <p className="mt-2 text-xs text-slate-500">
               
               {translate("Large or scanned documents may take longer.")}
             </p>
@@ -713,7 +713,7 @@ export default function DocumentAnalyzerWorkspace() {
             {/* Results header */}
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600">
+                <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
                   <CheckCircle2 size={18} />
                   
                   {translate("Analysis completed")}
@@ -826,7 +826,7 @@ export default function DocumentAnalyzerWorkspace() {
                       key={index}
                       className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
                     >
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                         {item.type || translate("Entity")}
                       </span>
 

@@ -345,7 +345,7 @@ export default function ReceiptScannerWorkspace() {
                 type="button"
                 onClick={reset}
                 disabled={loading}
-                className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-600 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-600 disabled:opacity-50 dark:text-gray-300 dark:hover:text-red-300"
               >
                 <X className="h-4 w-4" />  {translate("Remove")}
               </button>
@@ -405,7 +405,7 @@ export default function ReceiptScannerWorkspace() {
                     className="max-h-72 max-w-full rounded-lg object-contain"
                   />
                 ) : (
-                  <div className="flex flex-col items-center gap-3 text-gray-500">
+                  <div className="flex flex-col items-center gap-3 text-gray-500 dark:text-gray-400">
                     <FileText className="h-12 w-12" />
                     <span className="text-sm font-medium">{translate("PDF document selected")}</span>
                   </div>
@@ -482,7 +482,7 @@ export default function ReceiptScannerWorkspace() {
 
           {!extraction ? (
             <div className="flex min-h-72 flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 text-center dark:border-gray-700 dark:bg-gray-950/40">
-              <div className="mb-4 rounded-2xl bg-gray-100 p-4 text-gray-500 dark:bg-gray-800">
+              <div className="mb-4 rounded-2xl bg-gray-100 p-4 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                 <ReceiptText className="h-8 w-8" />
               </div>
               <p className="font-semibold text-gray-800 dark:text-gray-200">{translate("Your extracted data will appear here")}</p>
@@ -504,7 +504,7 @@ export default function ReceiptScannerWorkspace() {
                   {display(extraction.documentType).replaceAll("_", " ")}
                 </span>
                 {extraction.documentNumber && (
-                  <span className="text-xs text-gray-500">{translate("No.")} {extraction.documentNumber}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{translate("No.")} {extraction.documentNumber}</span>
                 )}
               </div>
 
@@ -593,7 +593,7 @@ export default function ReceiptScannerWorkspace() {
               <button
                 type="button"
                 onClick={reset}
-                className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-violet-700 dark:hover:text-violet-300"
+                className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-violet-700 dark:text-gray-400 dark:hover:text-violet-300"
               >
                 <RotateCcw className="h-4 w-4" />  {translate("Scan another document")}
               </button>
@@ -602,7 +602,7 @@ export default function ReceiptScannerWorkspace() {
         </section>
       </div>
 
-      <p className="mt-6 text-center text-xs leading-5 text-gray-500 dark:text-gray-500">
+      <p className="mt-6 text-center text-xs leading-5 text-gray-500 dark:text-gray-400">
         
         {translate("AI extraction can contain mistakes. Verify amounts, taxes, and payment details against the original document.")}
       </p>

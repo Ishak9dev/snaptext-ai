@@ -19,5 +19,5 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return <HomePageClient initialLanguage="en" />;
+  return <HomePageClient initialLanguage="en" canonicalUrl={absoluteUrl("/")} />;
 }

@@ -218,7 +218,7 @@ export default async function EnglishToolLandingPage({
       price: "0",
       priceCurrency: "EUR",
       description: "Two lifetime uses per tool.",
-      availability: "https://schema.org/InStock",
+      availability: "https://schema.org/OnlineOnly",
     },
     {
       "@type": "Offer",
@@ -227,7 +227,7 @@ export default async function EnglishToolLandingPage({
       priceCurrency: "EUR",
       description:
         "Unlimited access to all SnapText AI tools, billed monthly.",
-      availability: "https://schema.org/InStock",
+      availability: "https://schema.org/OnlineOnly",
     },
     {
       "@type": "Offer",
@@ -236,7 +236,7 @@ export default async function EnglishToolLandingPage({
       priceCurrency: "EUR",
       description:
         "Unlimited access to all SnapText AI tools, billed yearly.",
-      availability: "https://schema.org/InStock",
+      availability: "https://schema.org/OnlineOnly",
     },
   ];
 
@@ -357,7 +357,7 @@ export default async function EnglishToolLandingPage({
           <Link
             href={tool.workspace}
             aria-label={`Open ${tool.name}`}
-            className="rounded-xl bg-violet-500 px-7 py-3.5 font-semibold text-white hover:bg-violet-400"
+            className="rounded-xl bg-violet-600 px-7 py-3.5 font-semibold text-white hover:bg-violet-700"
           >
             Use this tool
           </Link>
